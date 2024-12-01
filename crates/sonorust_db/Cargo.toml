@@ -1,0 +1,10 @@
+[package]
+name = "sonorust_db"
+edition = "2021"
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+rusqlite.workspace = true
+serenity.workspace = true
+tokio.workspace = true

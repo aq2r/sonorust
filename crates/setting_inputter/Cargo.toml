@@ -1,0 +1,13 @@
+[package]
+name = "setting_inputter"
+edition = "2021"
+publish = false
+
+[dependencies]
+dialoguer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+crossterm.workspace = true
+tokio.workspace = true
+anyhow.workspace = true

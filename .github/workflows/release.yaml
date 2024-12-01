@@ -1,0 +1,52 @@
+permissions:
+  contents: write
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install cargo-about
+        run: cargo install cargo-about
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Generate License
+        run: |
+          echo "accepted = ['Apache-2.0','MIT','BSD-3-Clause','Zlib','MPL-2.0','Unicode-DFS-2016','ISC','OpenSSL','OpenSSL-standalone','SSLeay-standalone','GPL-1.0','LicenseRef-scancode-public-domain','LicenseRef-scancode-unknown-license-reference']" > about.toml
+          cargo about init
+          cargo about generate about.hbs -o ThirdPartyLicenses.html
+
+      - name: Create Release Archive
+        shell: bash
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          REPO_NAME=${GITHUB_REPOSITORY##*/}
+          RELEASE_NAME="${REPO_NAME}-${TAG_NAME}-windows"
+
+          mkdir -p "${RELEASE_NAME}"
+          cp "target/release/${REPO_NAME}.exe" "${RELEASE_NAME}/"
+          cp LICENSE README.md ThirdPartyLicenses.html "${RELEASE_NAME}/"
+          7z a "${RELEASE_NAME}.zip" "${RELEASE_NAME}"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

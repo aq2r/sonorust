@@ -1,0 +1,43 @@
+[workspace]
+members = [
+    "crates/sonorust",
+    "crates/sonorust_db",
+    "crates/sonorust_logger",
+    "crates/engtokana",
+    "crates/setting_inputter",
+    "crates/sbv2_api",
+]
+resolver = "2"
+
+[workspace.dependencies]
+sonorust_db.path = "crates/sonorust_db"
+sonorust_logger.path = "crates/sonorust_logger"
+engtokana.path = "crates/engtokana"
+setting_inputter.path = "crates/setting_inputter"
+sbv2_api.path = "crates/sbv2_api"
+langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
+eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.1.0" }
+
+anyhow = "1.0.91"
+chrono = "0.4.38"
+crossterm = "0.28.1"
+dialoguer = "0.11.0"
+env_logger = "0.11.5"
+log = "0.4.22"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.128"
+tokio = { version = "1.41.0", features = ["full"] }
+rusqlite = { version = "0.32.1", features = ["bundled"] }
+reqwest = { version = "0.12.7", features = ["json"] }
+symphonia = { version = "0.5.4", features = ["aac", "mp3", "isomp4", "alac"] }
+regex = "1.11.1"
+
+serenity = { version = "0.12.2", features = [
+    "cache",
+    "client",
+    "standard_framework",
+    "rustls_backend",
+    "collector",
+    "utils",
+] }
+songbird = { version = "0.4.3", features = ["builtin-queue"] }

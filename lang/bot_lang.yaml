@@ -1,0 +1,535 @@
+#____ Bot Commands ____#
+
+# Ping
+ping.command.name:
+    all: ping
+
+ping.command.description:
+    all: Pong!
+
+ping.embed.title:
+    all: Pong!
+
+ping.embed.measuring:
+    ja: 計測中...
+    en: Measuring...
+
+ping.embed.measured:
+    all: "Time: {:?}"
+
+# Help
+help.command.name:
+    all: help
+
+help.command.description:
+    ja: コマンドのヘルプを表示します。
+    en: Shows help for the command.
+
+help.embed.title:
+    ja: このBOTのヘルプ
+    en: Help for this BOT
+
+# Now
+now.command.name:
+    all: now
+
+now.command.description:
+    ja: 現在使用しているモデル情報を表示します。
+    en: Displays the model information currently being used.
+
+now.embed.title:
+    ja: "**{}** の現在のモデル情報"
+    en: "Current model information for **{}**"
+
+now.embed.model:
+    ja: モデル
+    en: Model
+
+now.embed.speaker:
+    ja: 話者
+    en: Speaker
+
+now.embed.style:
+    ja: スタイル
+    en: Style
+
+now.embed.speech_rate:
+    ja: 読み上げ速度
+    en: Speech Rate
+
+# Join
+join.command.name:
+    all: join
+
+join.command.description:
+    ja: 使用した人が接続しているボイスチャンネルに接続します。
+    en: It will connect you to the same voice channel as the person who used it.
+
+join.connected:
+    ja: ボイスチャンネルに接続しました。
+    en: Connected to the voice channel.
+
+join.already:
+    ja: すでにボイスチャンネルに参加しています。
+    en: Already in a voice channel.
+
+join.after_connecting:
+    ja: ボイスチャンネルに接続してから使用してください。
+    en: Connect to a voice channel before using.
+
+join.cannot_connect:
+    ja: ボイスチャンネルに接続できませんでした。
+    en: Could not connect to voice channel.
+
+# Leave
+leave.command.name:
+    all: leave
+
+leave.command.description:
+    ja: 接続しているボイスチャンネルから退出します。
+    en: Leaves the voice channel you are connected to.
+
+leave.disconnected:
+    ja: ボイスチャンネルから退出しました。
+    en: Left the voice channel.
+
+leave.already:
+    ja: ボイスチャンネルに接続していません。
+    en: Not connected to a voice channel.
+
+leave.cannot_disconnect:
+    ja: ボイスチャンネルから退出できませんでした。
+    en: Could not to leave voice channel.
+
+# Model
+model.command.name:
+    all: model
+
+model.command.description:
+    ja: 使用できるモデルの変更メニューを表示します。
+    en: Displays the change menu for the available models.
+
+model.embed.title:
+    ja: 使用できるモデル一覧
+    en: Available Models
+
+model.changed:
+    ja: "使用するモデルを **{}** に変更しました。"
+    en: "The model used has been changed to **{}**."
+
+# Speaker
+speaker.command.name:
+    all: speaker
+
+speaker.command.description:
+    ja: 現在のモデルの話者変更メニューを表示します。
+    en: Displays the speaker change menu for the current model.
+
+speaker.embed.title:
+    ja: モデル '{}' の使用できる話者一覧
+    en: List of available speakers for model '{}'
+
+speaker.changed_with_model:
+    ja: |-
+        使用するモデルを **{}** から **{}** に変更しました。
+        使用する話者を **{}** に変更しました。
+
+    en: |-
+        The model used has been changed from **{}** to **{}**.
+        The speaker used has been changed to **{}**.
+
+speaker.changed:
+    ja: "使用する話者を **{}** に変更しました。"
+    en: "The speaker used has been changed to **{}**."
+
+# Style
+style.command.name:
+    all: style
+
+style.command.description:
+    ja: 現在のモデルのスタイル変更メニューを表示します。
+    en: Displays the style change menu for the current model.
+
+style.embed.title:
+    ja: モデル '{}' の使用できるスタイル一覧
+    en: List of available styles for model '{}'
+
+style.changed_with_model:
+    ja: |-
+        使用するモデルを **{}** から **{}** に変更しました。
+        使用するスタイルを **{}** に変更しました。
+
+    en: |-
+        The model used has been changed from **{}** to **{}**.
+        The style used has been changed to **{}**.
+
+style.changed:
+    ja: "使用する話者を **{}** に変更しました。"
+    en: "The style used has been changed to **{}**."
+
+# Server
+server.command.name:
+    all: server
+
+server.command.description:
+    ja: サーバーに関する設定画面を表示します。
+    en: Displays the server settings screen.
+
+server.embed.title:
+    ja: "{} の現在設定"
+    en: "Current setting of {}"
+
+server.components.placeholder:
+    ja: 変更したい設定を選択してください...
+    en: Choose the setting you want to change...
+
+server.changed:
+    ja: '"{}" を **{}** に変更しました。'
+    en: '"{}" changed to **{}**.'
+
+# Dict
+dict.command.name:
+    all: dict
+
+dict.command.description:
+    ja: サーバー辞書メニューを表示します。
+    en: Displays the server dictionary menu.
+
+dict.embed.title:
+    ja: "{} のサーバー辞書設定"
+    en: "Server dictionary settings for {}"
+
+dict.unregistered:
+    ja: このサーバーではまだ何も登録されていません。
+    en: There is nothing registered on this server yet.
+
+dict.too_many:
+    ja: 登録されている単語が多すぎたため表示できませんでした。
+    en: There are too many words registered to display.
+
+dict.modal.add.title:
+    ja: 単語と読み方の登録
+    en: Register words and readings
+
+dict.modal.add.word:
+    ja: 単語
+    en: word
+
+dict.modal.add.readings:
+    ja: 読み方
+    en: readings
+
+dict.modal.add.set:
+    ja: |-
+        読み方を設定しました
+        単語: **{}** 読み方: **{}**
+
+    en: |-
+        Reading set
+        Word: **{}** Reading: **{}**
+
+dict.modal.remove.title:
+    ja: 登録した単語の削除
+    en: Deleting a registered word
+
+dict.modal.remove.field:
+    ja: 削除したい単語
+    en: Word want to delete
+
+dict.modal.remove.deleted:
+    ja: |-
+        辞書から読み方を削除しました
+        削除した単語: **{}**
+
+    en: |-
+        Readings have been removed from the dictionary.
+        Deleted word: **{}**
+
+dict.modal.remove.not_found:
+    ja: "辞書に 単語: **{}** は存在しませんでした。"
+    en: "The word: **{}** was not found in the dictionary."
+
+dict.label.add:
+    all: add
+
+dict.label.remove:
+    all: remove
+
+# Reload
+reload.command.name:
+    all: reload
+
+reload.command.description:
+    ja: |-
+        SBV2のモデルを再読み込みします。
+        BOTの所有者のみ使用できます。
+
+    en: |-
+        Reloads the SBV2 model.
+        Only available to bot owners.
+
+reload.executed:
+    ja: モデルを再読み込みしました。
+    en: The model has been reloaded.
+
+# Length
+length.command.name:
+    all: length
+
+length.command.description:
+    ja: 読み上げ速度を変更します。
+    en: Change the speech rate.
+
+length.option.length:
+    all: length
+
+length.option.length.description:
+    ja: 読み上げる速度
+    en: Speech Rate
+
+length.changed:
+    ja: 読み上げ速度を **{}** に変更しました。
+    en: The speech rate has been changed to **{}**.
+
+length.usage:
+    ja: "使用方法: `{}length (読み上げ速度)`"
+    en: "Usage: `{}length (Speech Rate)`"
+
+length.not_num:
+    ja: 読み上げ速度は数字を指定してください。
+    en: Specify the speech rate by entering a number.
+
+# Wav
+wav.command.name:
+    all: wav
+
+wav.command.description:
+    ja: 指定した内容を生成してその音声ファイルを添付したメッセージを送信します。
+    en: It will generate the content you specify and send a message with the audio file attached.
+
+wav.option.content:
+    all: content
+
+wav.option.content.description:
+    ja: 生成したい文章を入力します。
+    en: Enter the text you want to generate.
+
+wav.usage:
+    ja: "使用方法: `{}wav (生成したいテキスト)`"
+    en: "Usage: `{}wav (text to generate)`"
+
+wav.fail_infer:
+    ja: APIが起動していないため音声を生成できませんでした。
+    en: Audio could not be generated because the API was not launch.
+
+#____ Bot Messages ____#
+msg.attachments:
+    ja: 添付ファイル
+    en: Attachments
+
+msg.vc_joined:
+    ja: "{} さんが参加しました。"
+    en: "{} has joined."
+
+msg.vc_leaved:
+    ja: "{} さんが退席しました。"
+    en: "{} has left."
+
+msg.omitted:
+    ja: "{}、以下略。"
+    en: "{}, omitted."
+
+msg.only_use_guild_1:
+    ja: サーバー限定の機能です。
+    en: This is a server-only feature.
+
+msg.only_use_guild_2:
+    ja: このコマンドはサーバー以外では使用できません。
+    en: This command can only be used on the server.
+
+msg.only_admin:
+    ja: この機能はサーバーの管理者のみ利用可能です。
+    en: This feature is only available to server admin.
+
+msg.only_owner:
+    ja: このコマンドはBOTの所有者のみ利用可能です。
+    en: This command is only available to the bot owner.
+
+msg.failed.get:
+    ja: データの取得に失敗しました。
+    en: Failed to acquire data.
+
+msg.failed.update:
+    ja: データの更新に失敗しました。
+    en: Failed to update data.
+
+msg.error:
+    ja: エラーが発生しました。
+    en: An error has occurred.
+
+msg.failed.infer:
+    ja: |-
+        APIが起動していないため音声を生成できません。
+        ボイスチャンネルから退出しました。
+
+    en: |-
+        Audio cannot be generated because the API is not running.
+        Left the voice channel.
+
+#____ Guild Settings value ____#
+
+# Value
+guild.is_auto_join:
+    all: is_auto_join
+
+guild.is_dic_onlyadmin:
+    all: is_dic_onlyadmin
+
+guild.is_entrance_exit_log:
+    all: is_entrance_exit_log
+
+guild.is_entrance_exit_play:
+    all: is_entrance_exit_play
+
+guild.is_notice_attachment:
+    all: is_notice_attachment
+
+guild.is_if_long_fastread:
+    all: is_if_long_fastread
+
+# Description
+guild.desc.is_auto_join:
+    ja: VCへの自動参加
+    en: Automatically join VC
+
+guild.desc.is_dic_onlyadmin:
+    ja: 辞書の編集権限を管理者に限定する
+    en: Limit dictionary editing privileges to admin
+
+guild.desc.is_entrance_exit_log:
+    ja: 入退出時のテキストログ
+    en: Text log of entry and exit
+
+guild.desc.is_entrance_exit_play:
+    ja: 入退出時の音声通知
+    en: Voice notification when entering and exiting
+
+guild.desc.is_notice_attachment:
+    ja: 添付ファイルの音声通知
+    en: Voice notification for attachments
+
+guild.desc.is_if_long_fastread:
+    ja: 長い文章の場合早めに読み上げる
+    en: Read long sentences quickly
+
+#____ Log Messages ____#
+
+log.cant_open_file:
+    all: Can't open File.
+
+log.cant_create_file:
+    all: Can't create File.
+
+log.err_create_db:
+    all: Error creating Database
+
+log.not_implemented_command:
+    all: Not Implemented Command
+
+log.not_implemented_customid:
+    all: Not Implemented Custom ID
+
+log.not_implemented_value:
+    all: Not Implemented Value
+
+log.err_send_msg:
+    all: Error sending message
+
+log.cannot_res_interaction:
+    all: Cannot respond to interaction
+
+log.fail_regist_commands:
+    all: Failed to registering commands
+
+log.fail_inter_not_launch:
+    all: Failed to infer because API not launch.
+
+log.fail_conn_api:
+    all: Failed to connect API.
+
+log.fail_join_vc:
+    all: Failed to join voice channel
+
+log.fail_leave_vc:
+    all: Failed to leave Voice channel
+
+log.fail_get_data:
+    all: Failed to get data.
+
+log.fail_get_guild:
+    all: Failed to get guild.
+
+log.fail_update_guilddata:
+    all: Failed to get Guilddata.
+
+log.fail_get_user:
+    all: Failed to get User.
+
+log.fail_get_userdata:
+    all: Failed to get Userdata.
+
+log.fail_update_userdata:
+    all: Failed to update Userdata.
+
+log.fail_adj_vol:
+    all: Failed to adjusting volume
+
+log.fail_ch_queue:
+    all: Failed to get channel queue.
+
+#____ Component CustomId ____#
+
+customid.change_server_settings:
+    all: change_server_settings
+
+customid.dict.add:
+    all: dict_add
+
+customid.dict.remove:
+    all: dict_remove
+
+customid.select.model:
+    all: select_model
+
+customid.page.model.forward:
+    all: model_pageforward
+
+customid.page.model.number:
+    all: model_page_number
+
+customid.page.model.back:
+    all: model_pageback
+
+customid.select.speaker:
+    all: select_speaker
+
+customid.page.speaker.forward:
+    all: speaker_pageforward
+
+customid.page.speaker.number:
+    all: speaker_page_number
+
+customid.page.speaker.back:
+    all: speaker_pageback
+
+customid.select.style:
+    all: select_style
+
+customid.page.style.forward:
+    all: style_pageforward
+
+customid.page.style.number:
+    all: style_page_number
+
+customid.page.style.back:
+    all: style_pageback

@@ -1,0 +1,10 @@
+[package]
+name = "engtokana"
+edition = "2021"
+publish = false
+
+[dependencies]
+tokio.workspace = true
+reqwest.workspace = true
+anyhow.workspace = true
+log.workspace = true
