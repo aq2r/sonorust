@@ -17,7 +17,7 @@ This is a Discord bot for SBV2's `server_fastapi.py`.
 
 - Supports Japanese and English (Google or DeepL translate)
 
-## 使用方法
+## How to use
 
 After launching the file, follow the on-screen instructions to complete the initial setup.
 
