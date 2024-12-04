@@ -62,10 +62,16 @@ impl Sbv2ModelInfo {
         for (model_id_obj, model_info_obj) in json_value.as_object().unwrap().iter() {
             let model_id: u32 = model_id_obj.parse()?;
 
+            let config_path = model_info_obj["config_path"].to_string();
+
+            let split_pattern = match config_path.contains("\\\\") {
+                true => "\\\\",
+                false => "/",
+            };
+
             // モデルのフォルダ名
-            let folder_name = model_info_obj["config_path"]
-                .to_string()
-                .split("\\\\")
+            let folder_name = config_path
+                .split(split_pattern)
                 .nth(1)
                 .context("None Error")?
                 .to_string();

@@ -10,7 +10,23 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive-name: linux
+            archive-suffix: tar.gz
+            archive-cmd: tar czf
+            executable-suffix: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive-name: windows
+            archive-suffix: zip
+            archive-cmd: 7z a
+            executable-suffix: .exe
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
@@ -18,7 +34,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: ${{ matrix.target }}
 
       - name: Install cargo-about
         run: cargo install cargo-about
@@ -37,16 +53,16 @@ jobs:
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           REPO_NAME=${GITHUB_REPOSITORY##*/}
-          RELEASE_NAME="${REPO_NAME}-${TAG_NAME}-windows"
+          RELEASE_NAME="${REPO_NAME}-${TAG_NAME}-${{ matrix.archive-name }}"
 
           mkdir -p "${RELEASE_NAME}"
-          cp "target/release/${REPO_NAME}.exe" "${RELEASE_NAME}/"
+          cp "target/release/${REPO_NAME}${{ matrix.executable-suffix }}" "${RELEASE_NAME}/"
           cp LICENSE README.md ThirdPartyLicenses.html "${RELEASE_NAME}/"
-          7z a "${RELEASE_NAME}.zip" "${RELEASE_NAME}"
+          ${{ matrix.archive-cmd }} "${RELEASE_NAME}.${{ matrix.archive-suffix }}" "${RELEASE_NAME}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: "*.zip"
+          files: "*.${{ matrix.archive-suffix }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
