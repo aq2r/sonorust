@@ -36,23 +36,43 @@ impl SonorustError {
 
         match interaction {
             Interaction::Command(command_interaction) => {
-                eq_uilibrium::create_response_msg!(&ctx.http, command_interaction, embed = embed)
-                    .await?;
+                eq_uilibrium::create_response_msg!(
+                    &ctx.http,
+                    command_interaction,
+                    embed = embed,
+                    ephemeral = true
+                )
+                .await?;
             }
             Interaction::Component(component_interaction) => {
-                eq_uilibrium::create_response_msg!(&ctx.http, component_interaction, embed = embed)
-                    .await?;
+                eq_uilibrium::create_response_msg!(
+                    &ctx.http,
+                    component_interaction,
+                    embed = embed,
+                    ephemeral = true
+                )
+                .await?;
             }
             Interaction::Modal(modal_interaction) => {
-                eq_uilibrium::create_response_msg!(&ctx.http, modal_interaction, embed = embed)
-                    .await?;
+                eq_uilibrium::create_response_msg!(
+                    &ctx.http,
+                    modal_interaction,
+                    embed = embed,
+                    ephemeral = true
+                )
+                .await?;
             }
             Interaction::Ping(_) => {
                 log::error!("Can't respond ping interaction: {}", self);
             }
             Interaction::Autocomplete(command_interaction) => {
-                eq_uilibrium::create_response_msg!(&ctx.http, command_interaction, embed = embed)
-                    .await?;
+                eq_uilibrium::create_response_msg!(
+                    &ctx.http,
+                    command_interaction,
+                    embed = embed,
+                    ephemeral = true
+                )
+                .await?;
             }
 
             _ => log::error!("Can't respond Error message: {}", self),
