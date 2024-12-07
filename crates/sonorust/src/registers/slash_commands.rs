@@ -10,7 +10,7 @@ use serenity::all::{
 use setting_inputter::SettingsJson;
 
 use crate::{
-    commands,
+    commands::{self, Either},
     crate_extensions::{sbv2_api::Sbv2ClientExtension as _, SettingsJsonExtension as _},
     errors::SonorustError,
 };
@@ -236,15 +236,11 @@ pub async fn slash_commands(
                 _ => String::default(),
             };
 
-            let builder = {
-                use commands::wav::AttachmentOrStr::*;
-
-                match commands::wav(interaction.user.id, &content).await? {
-                    Attachment(attachment) => {
-                        CreateInteractionResponseFollowup::new().add_file(attachment)
-                    }
-                    Str(s) => CreateInteractionResponseFollowup::new().content(s),
+            let builder = match commands::wav(interaction.user.id, &content).await? {
+                Either::Left(attachment) => {
+                    CreateInteractionResponseFollowup::new().add_file(attachment)
                 }
+                Either::Right(content) => CreateInteractionResponseFollowup::new().content(content),
             };
 
             interaction.create_followup(&ctx.http, builder).await?;

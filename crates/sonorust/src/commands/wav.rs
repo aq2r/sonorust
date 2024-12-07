@@ -11,21 +11,21 @@ use crate::{
     errors::SonorustError,
 };
 
-pub enum AttachmentOrStr {
-    Attachment(CreateAttachment),
-    Str(&'static str),
-}
+use super::Either;
 
-pub async fn wav(user_id: UserId, text: &str) -> Result<AttachmentOrStr, SonorustError> {
+pub async fn wav(
+    user_id: UserId,
+    text: &str,
+) -> Result<Either<CreateAttachment, &'static str>, SonorustError> {
     let lang = SettingsJson::get_bot_lang();
     let userdata = UserData::from(user_id).await?;
 
     let Ok(voice_data) = Sbv2Client::infer_from_user(text, &userdata).await else {
         log::error!(lang_t!("log.fail_inter_not_launch"));
-        return Ok(AttachmentOrStr::Str(lang_t!("wav.fail_infer", lang)));
+        return Ok(Either::Right(lang_t!("wav.fail_infer", lang)));
     };
 
-    Ok(AttachmentOrStr::Attachment(CreateAttachment::bytes(
+    Ok(Either::Left(CreateAttachment::bytes(
         voice_data,
         "audio.mp3",
     )))

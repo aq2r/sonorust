@@ -9,7 +9,7 @@ use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
 use sonorust_db::GuildData;
 
 use crate::{
-    commands,
+    commands::{self, Either},
     crate_extensions::{
         sbv2_api::{Sbv2ClientExtension, READ_CHANNELS},
         SettingsJsonExtension,
@@ -248,17 +248,14 @@ async fn command_processing(
             return Ok(());
         };
 
-        {
-            use commands::wav::AttachmentOrStr::*;
-
-            match commands::wav(msg.author.id, content).await? {
-                Attachment(attachment) => {
-                    eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, add_file = attachment)
-                        .await?
-                }
-                Str(s) => eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, content = s).await?,
-            };
-        }
+        match commands::wav(msg.author.id, content).await? {
+            Either::Left(attachment) => {
+                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, add_file = attachment).await?
+            }
+            Either::Right(content) => {
+                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, content = content).await?
+            }
+        };
     }
 
     Ok(())
