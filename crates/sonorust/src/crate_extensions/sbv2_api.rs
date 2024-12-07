@@ -54,11 +54,7 @@ impl Sbv2ClientExtension for Sbv2Client {
 
     async fn infer_from_user(text: &str, userdata: &UserData) -> anyhow::Result<Vec<u8>> {
         let client = SettingsJson::get_sbv2_client();
-
-        let infer_lang = {
-            let lock = SETTINGS_JSON.read().unwrap();
-            lock.infer_lang
-        };
+        let infer_lang = SettingsJson::get_infer_lang();
 
         let valid_model = Sbv2Client::get_valid_model_from_userdata(userdata);
 
@@ -136,10 +132,7 @@ impl Sbv2ClientExtension for Sbv2Client {
             }
         }
 
-        let infer_lang = {
-            let lock = SETTINGS_JSON.read().unwrap();
-            lock.infer_lang.clone()
-        };
+        let infer_lang = SettingsJson::get_infer_lang();
 
         // そのチャンネルのqueueがなくなるまで繰り返す
         loop {
