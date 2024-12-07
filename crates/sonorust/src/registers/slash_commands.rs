@@ -236,12 +236,15 @@ pub async fn slash_commands(
                 _ => String::default(),
             };
 
-            let builder = match commands::wav(interaction.user.id, &content).await? {
-                (None, Some(s)) => CreateInteractionResponseFollowup::new().content(s),
-                (Some(attachment), None) => {
-                    CreateInteractionResponseFollowup::new().add_file(attachment)
+            let builder = {
+                use commands::wav::AttachmentOrStr::*;
+
+                match commands::wav(interaction.user.id, &content).await? {
+                    Attachment(attachment) => {
+                        CreateInteractionResponseFollowup::new().add_file(attachment)
+                    }
+                    Str(s) => CreateInteractionResponseFollowup::new().content(s),
                 }
-                _ => return Ok(()),
             };
 
             interaction.create_followup(&ctx.http, builder).await?;

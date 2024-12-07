@@ -248,16 +248,17 @@ async fn command_processing(
             return Ok(());
         };
 
-        match commands::wav(msg.author.id, content).await? {
-            (None, Some(s)) => {
-                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, content = s).await?;
-            }
-            (Some(attachment), None) => {
-                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, add_file = attachment).await?;
-            }
+        {
+            use commands::wav::AttachmentOrStr::*;
 
-            _ => (),
-        };
+            match commands::wav(msg.author.id, content).await? {
+                Attachment(attachment) => {
+                    eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, add_file = attachment)
+                        .await?
+                }
+                Str(s) => eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, content = s).await?,
+            };
+        }
     }
 
     Ok(())
