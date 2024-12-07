@@ -1,17 +1,14 @@
 use langrustang::lang_t;
 use serenity::all::{Context, CreateCommand, CreateEmbed};
-use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
+use setting_inputter::SettingsJson;
 
 use crate::crate_extensions::SettingsJsonExtension;
 
 pub async fn help(ctx: &Context) -> CreateEmbed {
     let lang = SettingsJson::get_bot_lang();
-    const IS_INLINE: bool = false;
+    let prefix = SettingsJson::get_prefix();
 
-    let prefix = {
-        let lock = SETTINGS_JSON.read().unwrap();
-        lock.prefix.clone()
-    };
+    const IS_INLINE: bool = false;
 
     // TODO: コマンドヘルプの追加
     let fields = [

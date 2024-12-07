@@ -19,10 +19,16 @@ static LANG_CACHE: LazyLock<Lang> = LazyLock::new(|| {
 
 pub trait SettingsJsonExtension {
     fn get_bot_lang() -> Lang;
+    fn get_prefix() -> String;
 }
 
 impl SettingsJsonExtension for SettingsJson {
     fn get_bot_lang() -> Lang {
         *LANG_CACHE
+    }
+
+    fn get_prefix() -> String {
+        let lock = SETTINGS_JSON.read().unwrap();
+        lock.prefix.clone()
     }
 }

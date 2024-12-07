@@ -25,11 +25,7 @@ pub async fn message(ctx: &Context, msg: &Message) -> Result<(), SonorustError> 
         return Ok(());
     }
 
-    // prefix を取得
-    let prefix = {
-        let settings_json = SETTINGS_JSON.read().unwrap();
-        settings_json.prefix.clone()
-    };
+    let prefix = SettingsJson::get_prefix();
 
     // prefix から始まっているかによって処理を変える
     match msg.content.starts_with(&prefix) {
