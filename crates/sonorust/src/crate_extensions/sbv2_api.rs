@@ -53,10 +53,7 @@ impl Sbv2ClientExtension for Sbv2Client {
     }
 
     async fn infer_from_user(text: &str, userdata: &UserData) -> anyhow::Result<Vec<u8>> {
-        let client = {
-            let lock = SETTINGS_JSON.read().unwrap();
-            Sbv2Client::from(&lock.host, lock.port)
-        };
+        let client = SettingsJson::get_sbv2_client();
 
         let infer_lang = {
             let lock = SETTINGS_JSON.read().unwrap();

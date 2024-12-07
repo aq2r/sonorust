@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 
 use crate::_langrustang_autogen::Lang;
+use sbv2_api::Sbv2Client;
 use setting_inputter::settings_json::SettingLang;
 use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
 
@@ -20,6 +21,7 @@ static LANG_CACHE: LazyLock<Lang> = LazyLock::new(|| {
 pub trait SettingsJsonExtension {
     fn get_bot_lang() -> Lang;
     fn get_prefix() -> String;
+    fn get_sbv2_client() -> Sbv2Client;
 }
 
 impl SettingsJsonExtension for SettingsJson {
@@ -30,5 +32,10 @@ impl SettingsJsonExtension for SettingsJson {
     fn get_prefix() -> String {
         let lock = SETTINGS_JSON.read().unwrap();
         lock.prefix.clone()
+    }
+
+    fn get_sbv2_client() -> Sbv2Client {
+        let lock = SETTINGS_JSON.read().unwrap();
+        Sbv2Client::from(&lock.host, lock.port)
     }
 }

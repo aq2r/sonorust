@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use langrustang::{format_t, lang_t};
 use sbv2_api::Sbv2Client;
 use serenity::all::{ChannelId, Context, GuildId, UserId, VoiceState};
-use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
+use setting_inputter::SettingsJson;
 use sonorust_db::GuildData;
 
 use crate::{
@@ -111,10 +111,7 @@ async fn auto_join(
         return Ok(());
     };
 
-    let client = {
-        let lock = SETTINGS_JSON.read().unwrap();
-        Sbv2Client::from(&lock.host, lock.port)
-    };
+    let client = SettingsJson::get_sbv2_client();
 
     // Api が起動していない場合何もしない
     if !client.is_api_activation().await {
