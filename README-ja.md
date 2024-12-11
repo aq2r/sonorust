@@ -5,6 +5,8 @@ Discord bot for Style-Bert-VITS2
 
 SBV2の `server_fastapi.py` 用の Discord Botです。
 
+ダウンロード: [releases](https://github.com/aq2r/sonorust/releases)
+
 ## 機能
 
 - ユーザーごとの `Model`, `Speaker`, `Style` の変更
