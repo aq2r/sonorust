@@ -16,7 +16,7 @@ engtokana.path = "crates/engtokana"
 setting_inputter.path = "crates/setting_inputter"
 sbv2_api.path = "crates/sbv2_api"
 langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
-eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.1.0" }
+eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.1.1" }
 
 anyhow = "1.0.91"
 chrono = "0.4.38"
