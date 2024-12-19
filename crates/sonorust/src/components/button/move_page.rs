@@ -63,8 +63,8 @@ pub async fn move_page(
     };
 
     eq_uilibrium::create_response_msg!(
-        &ctx.http,
         interaction,
+        &ctx.http,
         embed = embed,
         components = vec![CreateActionRow::SelectMenu(select_menu), button_row],
     )

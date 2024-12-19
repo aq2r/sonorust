@@ -23,7 +23,7 @@ impl SonorustError {
     ) -> Result<(), serenity::Error> {
         let embed = self.create_embed();
 
-        eq_uilibrium::send_msg!(&ctx.http, channel_id, embed = embed).await?;
+        eq_uilibrium::send_msg!(channel_id, &ctx.http, embed = embed).await?;
         Ok(())
     }
 
@@ -37,8 +37,8 @@ impl SonorustError {
         match interaction {
             Interaction::Command(command_interaction) => {
                 eq_uilibrium::create_response_msg!(
-                    &ctx.http,
                     command_interaction,
+                    &ctx.http,
                     embed = embed,
                     ephemeral = true
                 )
@@ -46,8 +46,8 @@ impl SonorustError {
             }
             Interaction::Component(component_interaction) => {
                 eq_uilibrium::create_response_msg!(
-                    &ctx.http,
                     component_interaction,
+                    &ctx.http,
                     embed = embed,
                     ephemeral = true
                 )
@@ -55,8 +55,8 @@ impl SonorustError {
             }
             Interaction::Modal(modal_interaction) => {
                 eq_uilibrium::create_response_msg!(
-                    &ctx.http,
                     modal_interaction,
+                    &ctx.http,
                     embed = embed,
                     ephemeral = true
                 )
@@ -67,8 +67,8 @@ impl SonorustError {
             }
             Interaction::Autocomplete(command_interaction) => {
                 eq_uilibrium::create_response_msg!(
-                    &ctx.http,
                     command_interaction,
+                    &ctx.http,
                     embed = embed,
                     ephemeral = true
                 )

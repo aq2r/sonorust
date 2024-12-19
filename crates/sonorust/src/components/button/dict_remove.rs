@@ -34,8 +34,8 @@ pub async fn dict_remove(
 
     if (is_dic_adminonly && !is_admin) && !is_bot_owner {
         eq_uilibrium::create_response_msg!(
-            &ctx.http,
             interaction,
+            &ctx.http,
             content = lang_t!("msg.only_admin", lang),
             ephemeral = true,
         )
@@ -90,16 +90,16 @@ async fn on_submit(
     match removed {
         Some(_) => {
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 content = format_t!("dict.modal.remove.deleted", lang, key)
             )
             .await?;
         }
         None => {
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 content = format_t!("dict.modal.remove.not_found", lang, key),
                 ephemeral = true,
             )

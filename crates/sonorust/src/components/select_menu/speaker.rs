@@ -17,8 +17,8 @@ pub async fn speaker(
         _ => {
             log::error!(lang_t!("log.fail_get_data"));
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 content = lang_t!("msg.failed.get", lang),
                 ephemeral = true,
             )
@@ -65,7 +65,7 @@ pub async fn speaker(
         }
     };
 
-    eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content, ephemeral = true)
+    eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content, ephemeral = true)
         .await?;
     Ok(())
 }

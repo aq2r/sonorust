@@ -76,14 +76,14 @@ async fn command_processing(
             debug_log();
 
             let embed = commands::help(ctx).await;
-            eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, embed = embed).await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
 
         "now" => {
             debug_log();
 
             let embed = commands::now(&msg.author).await?;
-            eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, embed = embed).await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
 
         "join" => {
@@ -98,8 +98,8 @@ async fn command_processing(
 
             let help_embed = commands::help(ctx).await;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 content = text,
                 embed = help_embed
             )
@@ -132,8 +132,8 @@ async fn command_processing(
 
             let (embed, components) = commands::model().await;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -145,8 +145,8 @@ async fn command_processing(
 
             let (embed, components) = commands::speaker(msg.author.id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -158,8 +158,8 @@ async fn command_processing(
 
             let (embed, components) = commands::style(msg.author.id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -171,8 +171,8 @@ async fn command_processing(
 
             let (embed, components) = commands::server(ctx, msg.guild_id, msg.author.id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -184,8 +184,8 @@ async fn command_processing(
 
             let (embed, components) = commands::dict(ctx, msg.guild_id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -250,10 +250,10 @@ async fn command_processing(
 
         match commands::wav(msg.author.id, content).await? {
             Either::Left(attachment) => {
-                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, add_file = attachment).await?
+                eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, add_file = attachment).await?
             }
             Either::Right(content) => {
-                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, content = content).await?
+                eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = content).await?
             }
         };
     }

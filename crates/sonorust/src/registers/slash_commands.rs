@@ -57,14 +57,14 @@ pub async fn slash_commands(
             debug_log();
 
             let embed = commands::help(ctx).await;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, embed = embed).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, embed = embed).await?;
         }
 
         "now" => {
             debug_log();
 
             let embed = commands::now(&interaction.user).await?;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, embed = embed).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, embed = embed).await?;
         }
 
         "join" => {
@@ -115,7 +115,7 @@ pub async fn slash_commands(
             debug_log();
 
             let content = commands::leave(ctx, interaction.guild_id).await;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
 
         "model" => {
@@ -123,8 +123,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::model().await;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -136,8 +136,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::speaker(interaction.user.id).await?;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -149,8 +149,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::style(interaction.user.id).await?;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -164,8 +164,8 @@ pub async fn slash_commands(
                 commands::server(ctx, interaction.guild_id, interaction.user.id).await?;
 
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -177,8 +177,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::dict(ctx, interaction.guild_id).await?;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -196,7 +196,7 @@ pub async fn slash_commands(
                 }
             };
 
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
 
         "length" => {
@@ -214,7 +214,7 @@ pub async fn slash_commands(
             };
 
             let content = commands::length(interaction.user.id, length).await?;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
 
         "wav" => {
