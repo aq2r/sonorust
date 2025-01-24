@@ -1,7 +1,6 @@
 use std::time::Instant;
 
 use langrustang::lang_t;
-use sbv2_api::Sbv2Client;
 use serenity::all::{
     CommandInteraction, Context, CreateCommand, CreateInteractionResponse,
     CreateInteractionResponseFollowup, CreateInteractionResponseMessage, EditMessage,
@@ -11,7 +10,7 @@ use setting_inputter::SettingsJson;
 
 use crate::{
     commands::{self, Either},
-    crate_extensions::{sbv2_api::Sbv2ClientExtension as _, SettingsJsonExtension as _},
+    crate_extensions::{play_on_voice_channel, SettingsJsonExtension as _},
     errors::SonorustError,
 };
 
@@ -101,7 +100,7 @@ pub async fn slash_commands(
             };
 
             // 接続音声を再生
-            Sbv2Client::play_on_voice_channel(
+            play_on_voice_channel(
                 ctx,
                 interaction.guild_id,
                 interaction.channel_id,

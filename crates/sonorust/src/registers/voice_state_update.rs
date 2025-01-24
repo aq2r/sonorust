@@ -1,14 +1,14 @@
 use std::collections::{HashMap, VecDeque};
 
 use langrustang::{format_t, lang_t};
-use sbv2_api::Sbv2Client;
 use serenity::all::{ChannelId, Context, GuildId, UserId, VoiceState};
 use setting_inputter::SettingsJson;
 use sonorust_db::GuildData;
 
 use crate::{
     crate_extensions::{
-        sbv2_api::{Sbv2ClientExtension, CHANNEL_QUEUES, READ_CHANNELS},
+        play_on_voice_channel,
+        sbv2_api::{CHANNEL_QUEUES, READ_CHANNELS},
         SettingsJsonExtension,
     },
     errors::SonorustError,
@@ -168,7 +168,7 @@ async fn auto_join(
         .say(&ctx.http, lang_t!("join.connected", lang))
         .await;
 
-    let _ = Sbv2Client::play_on_voice_channel(
+    let _ = play_on_voice_channel(
         ctx,
         Some(guild_id),
         connect_channel,
@@ -283,7 +283,7 @@ async fn entrance_exit_log_play(
         };
 
         if let Err(why) =
-            Sbv2Client::play_on_voice_channel(ctx, Some(guild_id), log_channel, user_id, &msg).await
+            play_on_voice_channel(ctx, Some(guild_id), log_channel, user_id, &msg).await
         {
             log::error!("{}: {}", lang_t!("log.err_send_msg"), why);
         };

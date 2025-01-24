@@ -3,17 +3,13 @@ use std::{collections::HashMap, time};
 use engtokana::EngToKana;
 use langrustang::{format_t, lang_t};
 use regex::Regex;
-use sbv2_api::Sbv2Client;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
 use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
 use sonorust_db::GuildData;
 
 use crate::{
     commands::{self, Either},
-    crate_extensions::{
-        sbv2_api::{Sbv2ClientExtension, READ_CHANNELS},
-        SettingsJsonExtension,
-    },
+    crate_extensions::{play_on_voice_channel, sbv2_api::READ_CHANNELS, SettingsJsonExtension},
     errors::SonorustError,
 };
 
@@ -110,7 +106,7 @@ async fn command_processing(
                 return Ok(());
             };
 
-            Sbv2Client::play_on_voice_channel(
+            play_on_voice_channel(
                 ctx,
                 msg.guild_id,
                 msg.channel_id,
@@ -326,7 +322,7 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
 
     // 設定で ON になっていて添付ファイルがあるなら添付ファイルがあることを知らせる
     if !msg.attachments.is_empty() && guilddata.options.is_notice_attachment {
-        Sbv2Client::play_on_voice_channel(
+        play_on_voice_channel(
             ctx,
             msg.guild_id,
             msg.channel_id,
@@ -336,8 +332,7 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
         .await?;
     }
 
-    Sbv2Client::play_on_voice_channel(ctx, msg.guild_id, msg.channel_id, msg.author.id, &content)
-        .await?;
+    play_on_voice_channel(ctx, msg.guild_id, msg.channel_id, msg.author.id, &content).await?;
 
     Ok(())
 }

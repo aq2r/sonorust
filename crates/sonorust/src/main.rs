@@ -6,17 +6,22 @@ mod crate_extensions;
 mod errors;
 mod registers;
 
+use std::path::PathBuf;
 use std::time::Duration;
 
+use crate_extensions::sbv2_api_rust::{TtsModelHolderExtension, TTS_MODEL_HOLDER};
+use crate_extensions::SettingsJsonExtension;
 use engtokana::EngToKana;
 use sbv2_api::Sbv2Client;
+use sbv2_core::{TtsModelHolder, TtsModelHolderFromPath};
 use serenity::all::GatewayError::DisallowedGatewayIntents;
 use serenity::{
     all::{Context, EventHandler, GatewayIntents, Interaction, Message, Ready, VoiceState},
     async_trait, Client,
 };
-use setting_inputter::settings_json::{SettingsJson, SETTINGS_JSON};
+use setting_inputter::settings_json::{InferUse, SettingsJson, SETTINGS_JSON};
 use songbird::SerenityInit as _;
+use tokio::fs::create_dir_all;
 use tokio::runtime::Runtime;
 
 pub struct Handler;
@@ -89,23 +94,85 @@ pub async fn bot_start() {
         std::process::exit(1);
     }
 
-    // sbv2の起動
-    if !sbv2_client.is_api_activation().await {
-        if let Some(path) = sbv2_path {
-            if cfg!(target_os = "windows") {
-                log::info!("Waiting for SBV2 API to start...");
+    let infer_use = SettingsJson::get_sbv2_inferuse();
 
-                if let Err(_) = sbv2_client.launch_api_win(&path).await {
-                    exit_program("The API could not be started. Exit the program.").await;
+    // sbv2の起動 (python版の場合)
+    if let InferUse::Python = infer_use {
+        if !sbv2_client.is_api_activation().await {
+            if let Some(path) = sbv2_path {
+                if cfg!(target_os = "windows") {
+                    log::info!("Waiting for SBV2 API to start...");
+
+                    if let Err(_) = sbv2_client.launch_api_win(&path).await {
+                        exit_program("The API could not be started. Exit the program.").await;
+                    }
+
+                    log::info!("The API has been started.");
                 }
-
-                log::info!("The API has been started.");
             }
+        }
+
+        if let Err(_) = sbv2_client.update_modelinfo().await {
+            exit_program("Failed to Connect SBV2 API.").await;
         }
     }
 
-    if let Err(_) = sbv2_client.update_modelinfo().await {
-        exit_program("Failed to Connect SBV2 API.").await;
+    // 必要なモデルのダウンロードと準備 (Rust版の場合)
+    if let InferUse::Rust = infer_use {
+        if let Err(_) = TtsModelHolder::download_tokenizer_and_debert().await {
+            exit_program("Failed to download Model. Exit the program.").await;
+        };
+
+        log::info!("Loading Sbv2 Model...");
+        TtsModelHolder::load_to_static(
+            "./appdata/downloads/deberta.onnx",
+            "./appdata/downloads/tokenizer.json",
+            None,
+        )
+        .await
+        .expect("Failed to Init Sbv2");
+
+        // モデルの読み込み
+        let models_path = PathBuf::from("./sbv2api_models");
+        if !models_path.exists() {
+            create_dir_all(&models_path)
+                .await
+                .expect("Failed create Folder");
+        }
+
+        let mut entries = tokio::fs::read_dir(&models_path)
+            .await
+            .expect("Falied read Folder");
+
+        let mut model_paths = vec![];
+        while let Ok(Some(e)) = entries.next_entry().await {
+            let file_path = e.path();
+            let Some(extension) = file_path.extension() else {
+                continue;
+            };
+
+            if extension == "sbv2" {
+                model_paths.push(file_path);
+            }
+        }
+
+        if model_paths.len() == 0 {
+            exit_program("No model, please put sbv2 file in `sbv2api_models`.").await;
+        }
+
+        let mut lock = TTS_MODEL_HOLDER.lock().await;
+        let model_holder = lock.as_mut().unwrap();
+        for i in &model_paths {
+            let model_name = match i.file_stem() {
+                Some(stem) => stem.to_string_lossy().to_string(),
+                None => "".to_string(),
+            };
+
+            log::info!("Loaded Model: {}", model_name);
+            model_holder
+                .load_from_sbv2file_path(&model_name, i)
+                .expect("Failed load Sbv2 File");
+        }
     }
 
     // カタカナ読み辞書の初期化

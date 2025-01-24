@@ -142,6 +142,7 @@ fn select_lang() -> (SettingLang, SettingLang) {
 /// 推論にどちらを使うか
 fn select_infer_use() -> InferUse {
     let choices = ["litagin02/Style-Bert-VITS2 (Default)", "tuna2134/sbv2-api"];
+    println!("Select the library to use for inference:");
     let selection = Select::new().items(&choices).interact().unwrap();
 
     match selection {
