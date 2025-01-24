@@ -57,6 +57,14 @@ The other 10 commands can be seen using the `help` command.
 
 <br>
 
+## Link
+
+Style-Bert-VITS2: https://github.com/litagin02/Style-Bert-VITS2
+
+sbv2-api: https://github.com/tuna2134/sbv2-api
+
+(This text-to-speech BOT uses a modified version of the core part of sbv2-api: https://github.com/aq2r/sbv2_core )
+
 #
 
 #### Lisense

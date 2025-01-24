@@ -55,6 +55,14 @@ Botのコマンド一覧を表示
 
 <br>
 
+## Link
+
+Style-Bert-VITS2: https://github.com/litagin02/Style-Bert-VITS2
+
+sbv2-api: https://github.com/tuna2134/sbv2-api
+
+(この読み上げBOTでは sbv2-api の core 部分を改変して使用しています: https://github.com/aq2r/sbv2_core )
+
 #
 
 #### Lisense
