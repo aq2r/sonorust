@@ -314,7 +314,7 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
 
     // read_limit よりも長い場合はその長さに制限する
     let content = match replaced_text.char_indices().nth(read_limit as _) {
-        Some((idx, _)) => format_t!("msg.omitted", lang, &msg.content[..idx]),
+        Some((idx, _)) => format_t!("msg.omitted", lang, &replaced_text[..idx]),
         None => replaced_text,
     };
 
