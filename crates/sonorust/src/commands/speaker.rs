@@ -6,12 +6,29 @@ use serenity::all::{
     ButtonStyle, CreateActionRow, CreateButton, CreateCommand, CreateEmbed, CreateSelectMenu,
     CreateSelectMenuKind, CreateSelectMenuOption, UserId,
 };
-use setting_inputter::SettingsJson;
+use setting_inputter::{settings_json::InferUse, SettingsJson};
 use sonorust_db::UserData;
 
-use crate::{crate_extensions::SettingsJsonExtension, errors::SonorustError};
+use crate::{
+    crate_extensions::{
+        sbv2_api_rust::{TtsModelHolderExtension, TTS_MODEL_HOLDER},
+        SettingsJsonExtension,
+    },
+    errors::SonorustError,
+};
 
 pub async fn speaker(
+    user_id: UserId,
+) -> Result<(CreateEmbed, Vec<CreateActionRow>), SonorustError> {
+    let infer_use = SettingsJson::get_sbv2_inferuse();
+
+    match infer_use {
+        InferUse::Python => sbv2_speaker(user_id).await,
+        InferUse::Rust => rust_speaker(user_id).await,
+    }
+}
+
+async fn sbv2_speaker(
     user_id: UserId,
 ) -> Result<(CreateEmbed, Vec<CreateActionRow>), SonorustError> {
     let userdata = UserData::from(user_id).await?;
@@ -80,6 +97,32 @@ fn create_select_menu(model: &ModelInfo) -> CreateSelectMenu {
             options: selectoption_vec,
         },
     )
+}
+
+// 現在未対応、対応するかは未定
+async fn rust_speaker(
+    user_id: UserId,
+) -> Result<(CreateEmbed, Vec<CreateActionRow>), SonorustError> {
+    let userdata = UserData::from(user_id).await?;
+    let lang = SettingsJson::get_bot_lang();
+
+    let valid_model = {
+        let lock = TTS_MODEL_HOLDER.lock().await;
+        let model_holder = lock.as_ref().unwrap();
+
+        model_holder.get_valid_model_from_userdata(&userdata)
+    };
+
+    let content = "1: Default".to_string();
+    let embed = CreateEmbed::new()
+        .title(format_t!(
+            "speaker.embed.title",
+            lang,
+            valid_model.model_name
+        ))
+        .description(content);
+
+    Ok((embed, vec![]))
 }
 
 fn create_button_row() -> CreateActionRow {
