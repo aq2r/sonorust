@@ -57,6 +57,12 @@ The other 10 commands can be seen using the `help` command.
 
 <br>
 
+## sbv2-api
+
+If you want to use https://github.com/tuna2134/sbv2-api
+
+On the initial setup screen, select `tuna2134/sbv2-api` and put your sbv2 files in the `sbv2api_models` folder.
+
 ## Link
 
 Style-Bert-VITS2: https://github.com/litagin02/Style-Bert-VITS2

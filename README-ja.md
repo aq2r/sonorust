@@ -55,6 +55,12 @@ Botのコマンド一覧を表示
 
 <br>
 
+## sbv2-api
+
+https://github.com/tuna2134/sbv2-api を使用したい場合は、
+
+初期設定画面で `tuna2134/sbv2-api` を選択し、`sbv2api_models` フォルダに sbv2 ファイルを入れてください。
+
 ## Link
 
 Style-Bert-VITS2: https://github.com/litagin02/Style-Bert-VITS2
