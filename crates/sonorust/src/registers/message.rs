@@ -3,17 +3,13 @@ use std::{collections::HashMap, time};
 use engtokana::EngToKana;
 use langrustang::{format_t, lang_t};
 use regex::Regex;
-use sbv2_api::Sbv2Client;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
 use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
 use sonorust_db::GuildData;
 
 use crate::{
-    commands,
-    crate_extensions::{
-        sbv2_api::{Sbv2ClientExtension, READ_CHANNELS},
-        SettingsJsonExtension,
-    },
+    commands::{self, Either},
+    crate_extensions::{play_on_voice_channel, sbv2_api::READ_CHANNELS, SettingsJsonExtension},
     errors::SonorustError,
 };
 
@@ -25,11 +21,7 @@ pub async fn message(ctx: &Context, msg: &Message) -> Result<(), SonorustError> 
         return Ok(());
     }
 
-    // prefix を取得
-    let prefix = {
-        let settings_json = SETTINGS_JSON.read().unwrap();
-        settings_json.prefix.clone()
-    };
+    let prefix = SettingsJson::get_prefix();
 
     // prefix から始まっているかによって処理を変える
     match msg.content.starts_with(&prefix) {
@@ -80,14 +72,14 @@ async fn command_processing(
             debug_log();
 
             let embed = commands::help(ctx).await;
-            eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, embed = embed).await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
 
         "now" => {
             debug_log();
 
             let embed = commands::now(&msg.author).await?;
-            eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, embed = embed).await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
 
         "join" => {
@@ -102,8 +94,8 @@ async fn command_processing(
 
             let help_embed = commands::help(ctx).await;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 content = text,
                 embed = help_embed
             )
@@ -114,7 +106,7 @@ async fn command_processing(
                 return Ok(());
             };
 
-            Sbv2Client::play_on_voice_channel(
+            play_on_voice_channel(
                 ctx,
                 msg.guild_id,
                 msg.channel_id,
@@ -136,8 +128,8 @@ async fn command_processing(
 
             let (embed, components) = commands::model().await;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -149,8 +141,8 @@ async fn command_processing(
 
             let (embed, components) = commands::speaker(msg.author.id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -162,8 +154,8 @@ async fn command_processing(
 
             let (embed, components) = commands::style(msg.author.id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -175,8 +167,8 @@ async fn command_processing(
 
             let (embed, components) = commands::server(ctx, msg.guild_id, msg.author.id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -188,8 +180,8 @@ async fn command_processing(
 
             let (embed, components) = commands::dict(ctx, msg.guild_id).await?;
             eq_uilibrium::send_msg!(
-                &ctx.http,
                 msg.channel_id,
+                &ctx.http,
                 embed = embed,
                 components = components
             )
@@ -253,14 +245,12 @@ async fn command_processing(
         };
 
         match commands::wav(msg.author.id, content).await? {
-            (None, Some(s)) => {
-                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, content = s).await?;
+            Either::Left(attachment) => {
+                eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, add_file = attachment).await?
             }
-            (Some(attachment), None) => {
-                eq_uilibrium::send_msg!(&ctx.http, msg.channel_id, add_file = attachment).await?;
+            Either::Right(content) => {
+                eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = content).await?
             }
-
-            _ => (),
         };
     }
 
@@ -332,7 +322,7 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
 
     // 設定で ON になっていて添付ファイルがあるなら添付ファイルがあることを知らせる
     if !msg.attachments.is_empty() && guilddata.options.is_notice_attachment {
-        Sbv2Client::play_on_voice_channel(
+        play_on_voice_channel(
             ctx,
             msg.guild_id,
             msg.channel_id,
@@ -342,8 +332,7 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
         .await?;
     }
 
-    Sbv2Client::play_on_voice_channel(ctx, msg.guild_id, msg.channel_id, msg.author.id, &content)
-        .await?;
+    play_on_voice_channel(ctx, msg.guild_id, msg.channel_id, msg.author.id, &content).await?;
 
     Ok(())
 }

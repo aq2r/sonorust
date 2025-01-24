@@ -24,3 +24,12 @@ pub use server::server;
 pub use speaker::speaker;
 pub use style::style;
 pub use wav::wav;
+
+pub enum Either<L, R>
+where
+    L: Sync + Send,
+    R: Sync + Send,
+{
+    Left(L),
+    Right(R),
+}

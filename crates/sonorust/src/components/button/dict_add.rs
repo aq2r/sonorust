@@ -34,8 +34,8 @@ pub async fn dict_add(
 
     if (is_dic_adminonly && !is_admin) && !is_bot_owner {
         eq_uilibrium::create_response_msg!(
-            &ctx.http,
             interaction,
+            &ctx.http,
             content = lang_t!("msg.only_admin", lang),
             ephemeral = true
         )
@@ -86,8 +86,8 @@ async fn on_submit(
 
     // 返答するメッセージを作成
     eq_uilibrium::create_response_msg!(
-        &ctx.http,
         interaction,
+        &ctx.http,
         content = format_t!("dict.modal.add.set", lang, key, value),
         ephemeral = true
     )

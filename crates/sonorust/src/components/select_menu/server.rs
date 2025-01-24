@@ -28,8 +28,8 @@ pub async fn server(
 
     let send_ephemeral_msg = |content: &str| {
         eq_uilibrium::create_response_msg!(
-            &ctx.http,
             interaction,
+            &ctx.http,
             content = content,
             ephemeral = true
         )
@@ -143,8 +143,8 @@ pub async fn server(
 
     // 返信用のメッセージを送信
     let task_create_response = eq_uilibrium::create_response_msg!(
-        &ctx.http,
         interaction,
+        &ctx.http,
         content = format_t!("server.changed", lang, choice_value_title, new_bool_value),
         ephemeral = false,
     );

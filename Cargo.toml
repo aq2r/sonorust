@@ -16,7 +16,7 @@ engtokana.path = "crates/engtokana"
 setting_inputter.path = "crates/setting_inputter"
 sbv2_api.path = "crates/sbv2_api"
 langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
-eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.1.0" }
+eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.2.0" }
 
 anyhow = "1.0.91"
 chrono = "0.4.38"
@@ -31,6 +31,11 @@ rusqlite = { version = "0.32.1", features = ["bundled"] }
 reqwest = { version = "0.12.7", features = ["json"] }
 symphonia = { version = "0.5.4", features = ["aac", "mp3", "isomp4", "alac"] }
 regex = "1.11.1"
+sbv2_core = { git = "https://github.com/aq2r/sbv2_core", features = [
+    "dynamic",
+    "cuda",
+    "cuda_tf32",
+] }
 
 serenity = { version = "0.12.2", features = [
     "cache",

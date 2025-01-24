@@ -11,8 +11,8 @@ pub async fn model(ctx: &Context, interaction: &ComponentInteraction) -> Result<
     // 返信する処理
     let send_msg = |content| {
         eq_uilibrium::create_response_msg!(
-            &ctx.http,
             interaction,
+            &ctx.http,
             content = content,
             ephemeral = true
         )

@@ -1,7 +1,6 @@
 use std::time::Instant;
 
 use langrustang::lang_t;
-use sbv2_api::Sbv2Client;
 use serenity::all::{
     CommandInteraction, Context, CreateCommand, CreateInteractionResponse,
     CreateInteractionResponseFollowup, CreateInteractionResponseMessage, EditMessage,
@@ -10,8 +9,8 @@ use serenity::all::{
 use setting_inputter::SettingsJson;
 
 use crate::{
-    commands,
-    crate_extensions::{sbv2_api::Sbv2ClientExtension as _, SettingsJsonExtension as _},
+    commands::{self, Either},
+    crate_extensions::{play_on_voice_channel, SettingsJsonExtension as _},
     errors::SonorustError,
 };
 
@@ -57,14 +56,14 @@ pub async fn slash_commands(
             debug_log();
 
             let embed = commands::help(ctx).await;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, embed = embed).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, embed = embed).await?;
         }
 
         "now" => {
             debug_log();
 
             let embed = commands::now(&interaction.user).await?;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, embed = embed).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, embed = embed).await?;
         }
 
         "join" => {
@@ -101,7 +100,7 @@ pub async fn slash_commands(
             };
 
             // 接続音声を再生
-            Sbv2Client::play_on_voice_channel(
+            play_on_voice_channel(
                 ctx,
                 interaction.guild_id,
                 interaction.channel_id,
@@ -115,7 +114,7 @@ pub async fn slash_commands(
             debug_log();
 
             let content = commands::leave(ctx, interaction.guild_id).await;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
 
         "model" => {
@@ -123,8 +122,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::model().await;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -136,8 +135,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::speaker(interaction.user.id).await?;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -149,8 +148,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::style(interaction.user.id).await?;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -164,8 +163,8 @@ pub async fn slash_commands(
                 commands::server(ctx, interaction.guild_id, interaction.user.id).await?;
 
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -177,8 +176,8 @@ pub async fn slash_commands(
 
             let (embed, components) = commands::dict(ctx, interaction.guild_id).await?;
             eq_uilibrium::create_response_msg!(
-                &ctx.http,
                 interaction,
+                &ctx.http,
                 embed = embed,
                 components = components,
             )
@@ -196,7 +195,7 @@ pub async fn slash_commands(
                 }
             };
 
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
 
         "length" => {
@@ -214,7 +213,7 @@ pub async fn slash_commands(
             };
 
             let content = commands::length(interaction.user.id, length).await?;
-            eq_uilibrium::create_response_msg!(&ctx.http, interaction, content = content).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
 
         "wav" => {
@@ -237,11 +236,10 @@ pub async fn slash_commands(
             };
 
             let builder = match commands::wav(interaction.user.id, &content).await? {
-                (None, Some(s)) => CreateInteractionResponseFollowup::new().content(s),
-                (Some(attachment), None) => {
+                Either::Left(attachment) => {
                     CreateInteractionResponseFollowup::new().add_file(attachment)
                 }
-                _ => return Ok(()),
+                Either::Right(content) => CreateInteractionResponseFollowup::new().content(content),
             };
 
             interaction.create_followup(&ctx.http, builder).await?;

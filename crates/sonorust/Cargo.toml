@@ -19,3 +19,5 @@ log.workspace = true
 songbird.workspace = true
 anyhow.workspace = true
 regex.workspace = true
+sbv2_core.workspace = true
+reqwest.workspace = true

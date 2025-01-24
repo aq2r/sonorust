@@ -1,7 +1,6 @@
 use langrustang::lang_t;
-use sbv2_api::Sbv2Client;
 use serenity::all::{CreateCommand, UserId};
-use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
+use setting_inputter::{settings_json::InferUse, SettingsJson};
 
 use crate::{crate_extensions::SettingsJsonExtension, registers::APP_OWNER_ID};
 
@@ -17,14 +16,17 @@ pub async fn reload(user_id: UserId) -> anyhow::Result<&'static str> {
         return Ok(lang_t!("msg.only_owner", lang));
     }
 
-    let client = {
-        let lock = SETTINGS_JSON.read().unwrap();
-        Sbv2Client::from(&lock.host, lock.port)
-    };
+    let infer_use = SettingsJson::get_sbv2_inferuse();
 
-    client.update_modelinfo().await?;
+    match infer_use {
+        InferUse::Python => {
+            let client = SettingsJson::get_sbv2_client();
+            client.update_modelinfo().await?;
 
-    Ok(lang_t!("reload.executed", lang))
+            Ok(lang_t!("reload.executed", lang))
+        }
+        InferUse::Rust => Ok(lang_t!("reload.not_supported", lang)),
+    }
 }
 
 pub fn create_command() -> CreateCommand {

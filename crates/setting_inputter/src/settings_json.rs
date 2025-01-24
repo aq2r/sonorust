@@ -21,6 +21,7 @@ pub static SETTINGS_JSON: LazyLock<RwLock<SettingsJson>> = LazyLock::new(|| {
         port: 5000,
         bot_lang: SettingLang::Ja,
         infer_lang: SettingLang::Ja,
+        infer_use: InferUse::Python,
     })
 });
 
@@ -41,6 +42,12 @@ impl Display for SettingLang {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum InferUse {
+    Python,
+    Rust,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SettingsJson {
     pub sbv2_path: Option<String>,
@@ -51,6 +58,7 @@ pub struct SettingsJson {
     pub port: u32,
     pub bot_lang: SettingLang,
     pub infer_lang: SettingLang,
+    pub infer_use: InferUse,
 }
 
 impl SettingsJson {
@@ -131,6 +139,19 @@ fn select_lang() -> (SettingLang, SettingLang) {
     )
 }
 
+/// 推論にどちらを使うか
+fn select_infer_use() -> InferUse {
+    let choices = ["litagin02/Style-Bert-VITS2 (Default)", "tuna2134/sbv2-api"];
+    println!("Select the library to use for inference:");
+    let selection = Select::new().items(&choices).interact().unwrap();
+
+    match selection {
+        0_usize => InferUse::Python,
+        1_usize => InferUse::Rust,
+        _ => InferUse::Python,
+    }
+}
+
 /// sbv2のパスを入力してもらう
 fn input_sbv2_path() -> Option<String> {
     let if_input_path = Confirm::new()
@@ -165,7 +186,11 @@ fn input_sbv2_path() -> Option<String> {
 /// ユーザーがデフォルト設定を使用するを選択したときの処理
 fn default_process() -> String {
     let (bot_lang, infer_lang) = select_lang();
-    let sbv2_path = input_sbv2_path();
+    let infer_use = select_infer_use();
+    let sbv2_path = match infer_use {
+        InferUse::Python => input_sbv2_path(),
+        InferUse::Rust => None,
+    };
 
     let settings_json = SettingsJson {
         sbv2_path,
@@ -176,6 +201,7 @@ fn default_process() -> String {
         port: 5000,
         bot_lang,
         infer_lang,
+        infer_use,
     };
 
     serde_json::to_string_pretty(&settings_json).unwrap()
@@ -214,7 +240,11 @@ fn not_default_process() -> String {
         .unwrap();
 
     let (bot_lang, infer_lang) = select_lang();
-    let sbv2_path = input_sbv2_path();
+    let infer_use = select_infer_use();
+    let sbv2_path = match infer_use {
+        InferUse::Python => input_sbv2_path(),
+        InferUse::Rust => None,
+    };
 
     let settings_json = SettingsJson {
         sbv2_path,
@@ -225,6 +255,7 @@ fn not_default_process() -> String {
         port,
         bot_lang,
         infer_lang,
+        infer_use,
     };
     serde_json::to_string_pretty(&settings_json).unwrap()
 }
