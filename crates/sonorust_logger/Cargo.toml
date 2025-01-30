@@ -1,9 +1,0 @@
-[package]
-name = "sonorust_logger"
-edition = "2021"
-publish = false
-
-[dependencies]
-log.workspace = true
-env_logger.workspace = true
-chrono.workspace = true
