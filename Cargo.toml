@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/engtokana"]
+members = ["crates/engtokana", "crates/sonorust_logger"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -7,10 +7,10 @@ resolver = "2"
 # eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.2.0" }
 
 anyhow = "1.0.91"
-# chrono = "0.4.38"
+chrono = "0.4.38"
 # crossterm = "0.28.1"
 # dialoguer = "0.11.0"
-# env_logger = "0.11.5"
+env_logger = "0.11.5"
 log = "0.4.22"
 # serde = { version = "1.0.215", features = ["derive"] }
 # serde_json = "1.0.128"
