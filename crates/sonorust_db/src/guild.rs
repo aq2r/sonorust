@@ -3,7 +3,6 @@ use std::sync::LazyLock;
 
 use serenity::all::{ChannelId, GuildId};
 use sqlx::Row;
-use sqlx::{Sqlite, Statement};
 use tokio::sync::{RwLock as TokioRwLock, RwLockWriteGuard as TokioRwLockWriteGuard};
 
 use crate::DB_POOL;
