@@ -12,6 +12,7 @@ pub fn setup_logger() {
         .filter_level(LevelFilter::Off)
         .filter_module("sonorust", env_levelfilter)
         .filter_module("setting_json", env_levelfilter)
+        .filter_module("infer_api", env_levelfilter)
         .format(move |buf, record| {
             let level = record.level();
             let level_color = match level {

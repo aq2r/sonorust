@@ -8,8 +8,13 @@ reqwest.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
+log.workspace = true
+sbv2_core = { workspace = true, optional = true }
+zip.workspace = true
+tar.workspace = true
+flate2.workspace = true
 
 
 [features]
 infer-python = []
-infer-rust = []
+infer-rust = ["sbv2_core"]
