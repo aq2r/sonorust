@@ -1,0 +1,21 @@
+[package]
+name = "setting_json"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dialoguer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+crossterm.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+sonorust_logger.workspace = true
+
+
+[features]
+infer-python = []
+infer-rust = []

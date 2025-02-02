@@ -11,6 +11,7 @@ pub fn setup_logger() {
     Builder::from_env(env_level)
         .filter_level(LevelFilter::Off)
         .filter_module("sonorust", env_levelfilter)
+        .filter_module("setting_json", env_levelfilter)
         .format(move |buf, record| {
             let level = record.level();
             let level_color = match level {
