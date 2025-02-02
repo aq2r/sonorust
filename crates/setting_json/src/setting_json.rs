@@ -30,6 +30,27 @@ impl std::fmt::Display for BotLang {
     }
 }
 
+#[cfg(feature = "infer-python")]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum InferLang {
+    Ja,
+    En,
+    Zh,
+}
+
+#[cfg(feature = "infer-python")]
+impl std::fmt::Display for InferLang {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            InferLang::Ja => "Ja",
+            InferLang::En => "En",
+            InferLang::Zh => "Zh",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
 static SETTING_JSON: OnceLock<RwLock<SettingJson>> = OnceLock::new();
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -40,6 +61,19 @@ pub struct SettingJson {
     prefix: String,
     bot_lang: BotLang,
 
+    #[cfg(feature = "infer-python")]
+    sbv2_path: Option<String>,
+
+    #[cfg(feature = "infer-python")]
+    host: String,
+
+    #[cfg(feature = "infer-python")]
+    port: u32,
+
+    #[cfg(feature = "infer-python")]
+    infer_lang: InferLang,
+
+    #[cfg(feature = "infer-rust")]
     model_path: String,
 }
 
@@ -168,12 +202,92 @@ impl SettingJson {
             _ => BotLang::Ja,
         };
 
-        // host: String,
+        #[cfg(feature = "infer-python")]
+        let (sbv2_path, host, port, infer_lang) = {
+            use dialoguer::Confirm;
+
+            let choices = ["En", "Ja", "Zh"];
+            println!("Select SBV2 Infer language:");
+            let infer_lang = match Select::new().items(&choices).interact().unwrap() {
+                0 => InferLang::En,
+                1 => InferLang::Ja,
+                2 => InferLang::Zh,
+                _ => InferLang::Ja,
+            };
+
+            // 自動起動はwindowsのみ対応
+            // sbv2_path: Option<String>,
+            #[cfg(target_os = "windows")]
+            let sbv2_path = {
+                let if_input_path = Confirm::new()
+                    .with_prompt("Do you want to set the path for SBV2 to start automatically?")
+                    .default(true)
+                    .interact()
+                    .unwrap();
+
+                match if_input_path {
+                    true => {
+                        let input: String = dialoguer::Input::new()
+                            .with_prompt("Please enter the SBV2 path")
+                            .validate_with(|input: &String| -> Result<(), &str> {
+                                let input_path = PathBuf::from(input);
+                                let server_fastapi_py = input_path.join("server_fastapi.py");
+                                let python_exe = input_path.join("venv/Scripts/python.exe");
+
+                                match (server_fastapi_py.exists(), python_exe.exists()) {
+                                    (true, true) => Ok(()),
+                                    _ => Err("The path you entered is not an SBV2 path."),
+                                }
+                            })
+                            .interact()
+                            .unwrap();
+
+                        Some(input)
+                    }
+                    false => None,
+                }
+            };
+
+            #[cfg(not(target_os = "windows"))]
+            let sbv2_path: Option<String> = None;
+
+            // host: String,
+            let host: String = Input::new()
+                .with_prompt("Input `SBV2 API host`")
+                .with_initial_text("127.0.0.1")
+                .interact_text()
+                .unwrap();
+
+            // port: String,
+            let port: u32 = Input::new()
+                .with_prompt("Input `SBV2 API port`")
+                .with_initial_text("5000")
+                .interact_text()
+                .unwrap();
+
+            (sbv2_path, host, port, infer_lang)
+        };
+
+        #[cfg(feature = "infer-rust")]
         let model_path: String = Input::new()
             .with_prompt("Input `sbv2_api model path`")
             .interact_text()
             .unwrap();
 
+        #[cfg(feature = "infer-python")]
+        let setting_json = SettingJson {
+            bot_token,
+            read_limit,
+            default_model,
+            prefix,
+            bot_lang,
+            sbv2_path,
+            host,
+            port,
+            infer_lang,
+        };
+
+        #[cfg(feature = "infer-rust")]
         let setting_json = SettingJson {
             bot_token,
             read_limit,

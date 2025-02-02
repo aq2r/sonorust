@@ -1,0 +1,15 @@
+[package]
+name = "infer_api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+
+
+[features]
+infer-python = []
+infer-rust = []

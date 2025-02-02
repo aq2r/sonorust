@@ -1315,6 +1315,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "infer_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "reqwest 0.12.12",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

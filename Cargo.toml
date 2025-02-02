@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/engtokana",
+    "crates/infer_api",
     "crates/setting_json",
     "crates/sonorust_db",
     "crates/sonorust_logger",
