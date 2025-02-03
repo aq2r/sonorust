@@ -1,17 +1,13 @@
 [workspace]
-members = [
-    "crates/engtokana",
-    "crates/infer_api",
-    "crates/setting_json",
-    "crates/sonorust_db",
-    "crates/sonorust_logger",
-]
+members = ["crates/engtokana", "crates/sonorust_db", "crates/sonorust_logger"]
 resolver = "2"
 
 [workspace.dependencies]
+engtokana = { path = "crates/engtokana" }
+sonorust_db = { path = "crates/sonorust_db" }
 sonorust_logger = { path = "crates/sonorust_logger" }
-# langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
-# eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.2.0" }
+langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
+eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.2.0" }
 
 anyhow = "1.0.91"
 chrono = "0.4.38"
@@ -27,8 +23,8 @@ reqwest = { version = "0.12.7", features = ["json"] }
 zip = "2.2.2"
 flate2 = "1.0.35"
 tar = "0.4.43"
-# symphonia = { version = "0.5.4", features = ["aac", "mp3", "isomp4", "alac"] }
-# regex = "1.11.1"
+symphonia = { version = "0.5.4", features = ["aac", "mp3", "isomp4", "alac"] }
+regex = "1.11.1"
 sbv2_core = { git = "https://github.com/aq2r/sbv2_core", features = [
     "dynamic",
     "cuda",
