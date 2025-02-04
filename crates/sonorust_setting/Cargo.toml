@@ -1,0 +1,12 @@
+[package]
+name = "sonorust_setting"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+dialoguer.workspace = true
+crossterm.workspace = true

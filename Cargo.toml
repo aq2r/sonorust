@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/engtokana", "crates/sonorust_db", "crates/sonorust_logger"]
+members = ["crates/engtokana", "crates/sonorust_db", "crates/sonorust_logger", "crates/sonorust_setting"]
 resolver = "2"
 
 [workspace.dependencies]
