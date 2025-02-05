@@ -1,5 +1,5 @@
 #[derive(Debug, thiserror::Error)]
-pub enum Sbv2PythonClientError {
+pub enum Sbv2PythonError {
     #[error("reqwest Error: {0}")]
     ReqwestError(#[from] reqwest::Error),
 

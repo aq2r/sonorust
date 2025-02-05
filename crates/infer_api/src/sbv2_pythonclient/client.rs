@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path, time::Duration};
 
 use tokio::process;
 
-use super::errors::Sbv2PythonClientError;
+use super::errors::Sbv2PythonError;
 
 #[derive(Debug, Clone)]
 pub struct Sbv2PythonModel {
@@ -50,7 +50,7 @@ pub struct Sbv2PythonClient {
 }
 
 impl Sbv2PythonClient {
-    pub async fn connect(host: &str, port: u32) -> Result<Self, Sbv2PythonClientError> {
+    pub async fn connect(host: &str, port: u32) -> Result<Self, Sbv2PythonError> {
         let host: String = host.into();
 
         let client = reqwest::Client::new();
@@ -72,7 +72,7 @@ impl Sbv2PythonClient {
         text: &str,
         param: Sbv2PythonInferParam,
         default_model: &str,
-    ) -> Result<Vec<u8>, Sbv2PythonClientError> {
+    ) -> Result<Vec<u8>, Sbv2PythonError> {
         let valid_model = self
             .get_valid_model(
                 &param.model_name,
@@ -246,7 +246,7 @@ impl Sbv2PythonClient {
         client: &reqwest::Client,
         host: &str,
         port: u32,
-    ) -> Result<Sbv2PythonModelMap, Sbv2PythonClientError> {
+    ) -> Result<Sbv2PythonModelMap, Sbv2PythonError> {
         let url = format!("http://{host}:{port}/models/refresh");
 
         let modelinfo_text = client.post(url).send().await?.text().await?;
@@ -258,7 +258,7 @@ impl Sbv2PythonClient {
 
         for (model_id_obj, model_info_obj) in json_value.as_object().unwrap().iter() {
             let model_id: u64 = model_id_obj.parse().map_err(|err| {
-                Sbv2PythonClientError::ModelInfoParseError(format!("model_id cannot parsed: {err}"))
+                Sbv2PythonError::ModelInfoParseError(format!("model_id cannot parsed: {err}"))
             })?;
 
             let config_path = model_info_obj["config_path"].to_string();
@@ -273,21 +273,21 @@ impl Sbv2PythonClient {
                 .split(split_pattern)
                 .nth(1)
                 .ok_or_else(|| {
-                    Sbv2PythonClientError::ModelInfoParseError("folder_name is None".to_string())
+                    Sbv2PythonError::ModelInfoParseError("folder_name is None".to_string())
                 })?
                 .to_string();
 
             // HashMap<speaker_name, speaker_id>
             let spk2id = {
                 let object = model_info_obj["spk2id"].as_object().ok_or_else(|| {
-                    Sbv2PythonClientError::ModelInfoParseError("spk2id is None".to_string())
+                    Sbv2PythonError::ModelInfoParseError("spk2id is None".to_string())
                 })?;
 
                 let mut map = HashMap::new();
                 for (speaker_name, speaker_id) in object {
                     let speaker_name = speaker_name.clone();
                     let speaker_id = speaker_id.as_u64().ok_or_else(|| {
-                        Sbv2PythonClientError::ModelInfoParseError(format!(
+                        Sbv2PythonError::ModelInfoParseError(format!(
                             "Invalid speaker_id: {speaker_name}"
                         ))
                     })?;
@@ -300,14 +300,14 @@ impl Sbv2PythonClient {
             // HashMap<style_name, style_id>
             let style2id = {
                 let object = model_info_obj["style2id"].as_object().ok_or_else(|| {
-                    Sbv2PythonClientError::ModelInfoParseError("style2id is None".to_string())
+                    Sbv2PythonError::ModelInfoParseError("style2id is None".to_string())
                 })?;
 
                 let mut map = HashMap::new();
                 for (style_name, style_id) in object {
                     let style_name = style_name.clone();
                     let style_id = style_id.as_u64().ok_or_else(|| {
-                        Sbv2PythonClientError::ModelInfoParseError(format!(
+                        Sbv2PythonError::ModelInfoParseError(format!(
                             "Invalid style_id: {style_name}"
                         ))
                     })?;
@@ -340,7 +340,7 @@ impl Sbv2PythonClient {
         })
     }
 
-    pub async fn update_modelinfo(&mut self) -> Result<(), Sbv2PythonClientError> {
+    pub async fn update_modelinfo(&mut self) -> Result<(), Sbv2PythonError> {
         let model_info = Self::get_modelinfo(&self.client, &self.host, self.port).await?;
         self.model_info = model_info;
 
