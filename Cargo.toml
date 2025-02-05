@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/engtokana", "crates/sonorust_db", "crates/sonorust_logger", "crates/sonorust_setting"]
+members = [
+    "crates/engtokana",
+    "crates/infer_api",
+    "crates/sonorust_db",
+    "crates/sonorust_logger",
+    "crates/sonorust_setting",
+]
 resolver = "2"
 
 [workspace.dependencies]
@@ -10,6 +16,7 @@ langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
 eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.2.0" }
 
 anyhow = "1.0.91"
+thiserror = "2.0.11"
 chrono = "0.4.38"
 crossterm = "0.28.1"
 dialoguer = "0.11.0"
