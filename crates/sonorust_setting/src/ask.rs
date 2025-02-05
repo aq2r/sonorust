@@ -123,16 +123,25 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
                 port,
                 infer_lang,
                 onnx_model_path: PathBuf::new(),
+                max_load_model_count: None,
             }
         }
 
         InferUse::Rust => {
-            let inputed: String = Input::new()
-                .with_prompt("Enter the folder path where the ***.sbv2 file")
+            let onnx_model_path = {
+                let inputed: String = Input::new()
+                    .with_prompt("Enter the folder path where the ***.sbv2 file")
+                    .interact_text()
+                    .unwrap();
+
+                PathBuf::from(inputed)
+            };
+
+            let max_load_model_count: u32 = Input::new()
+                .with_prompt("Enter the maximum number of models to load")
+                .with_initial_text("5")
                 .interact_text()
                 .unwrap();
-
-            let onnx_model_path = PathBuf::from(inputed);
 
             SettingJson {
                 bot_token,
@@ -146,6 +155,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
                 port: 5000,
                 infer_lang: InferLang::Ja,
                 onnx_model_path,
+                max_load_model_count: Some(max_load_model_count),
             }
         }
     };

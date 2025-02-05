@@ -1,12 +1,7 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::{OnceLock, RwLock, RwLockReadGuard},
-};
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt};
-
-use crate::ask::ask_to_create_setting_json;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum BotLang {
@@ -50,8 +45,6 @@ pub enum InferUse {
     Rust,
 }
 
-static SETTING_JSON: OnceLock<RwLock<SettingJson>> = OnceLock::new();
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettingJson {
     // all
@@ -70,18 +63,11 @@ pub struct SettingJson {
 
     // rust
     pub onnx_model_path: PathBuf,
+    pub max_load_model_count: Option<u32>,
 }
 
 impl SettingJson {
-    pub fn get_lock<'a>() -> RwLockReadGuard<'a, SettingJson> {
-        SETTING_JSON
-            .get()
-            .expect("Not initialized SETTING_JSON")
-            .read()
-            .unwrap()
-    }
-
-    pub async fn init<P>(json_path: P) -> anyhow::Result<()>
+    pub async fn init<P>(json_path: P) -> anyhow::Result<SettingJson>
     where
         P: AsRef<Path>,
     {
@@ -94,34 +80,31 @@ impl SettingJson {
         let setting_json = {
             let json_string = json_string.clone();
 
-            tokio::task::spawn_blocking(move || -> anyhow::Result<SettingJson> {
-                match serde_json::from_str::<SettingJson>(&json_string) {
-                    Ok(json) => Ok(json),
-                    Err(_) => {
-                        use std::fs::File;
-                        use std::io::Write as _;
-
-                        let setting_json = ask_to_create_setting_json()?;
-
-                        let json_string = serde_json::to_string_pretty(&setting_json)?;
-                        let mut file = File::create(json_path)?;
-                        file.write_all(json_string.as_bytes())?;
-
-                        Ok(setting_json)
-                    }
-                }
+            let result = tokio::task::spawn_blocking(move || {
+                serde_json::from_str::<SettingJson>(&json_string)
             })
-            .await??
+            .await?;
+
+            match result {
+                Ok(json) => json,
+
+                // 指定されたパスにjsonがなかった場合作成
+                Err(_) => {
+                    let setting_json = crate::ask::ask_to_create_setting_json()?;
+
+                    let json_string = serde_json::to_string_pretty(&setting_json)?;
+                    let mut file = File::create(json_path).await?;
+                    file.write_all(json_string.as_bytes()).await?;
+
+                    setting_json
+                }
+            }
         };
 
-        SETTING_JSON
-            .set(RwLock::new(setting_json))
-            .expect("Already initialized SETTING_JSON");
-
-        Ok(())
+        Ok(setting_json)
     }
 
-    pub async fn dump_json<P>(json_path: P, setting_json: SettingJson) -> anyhow::Result<()>
+    pub async fn write_json<P>(json_path: P, setting_json: SettingJson) -> anyhow::Result<()>
     where
         P: AsRef<Path>,
     {
@@ -132,16 +115,6 @@ impl SettingJson {
             tokio::task::spawn_blocking(move || serde_json::to_string_pretty(&setting_json))
                 .await??
         };
-
-        {
-            let mut lock = SETTING_JSON
-                .get()
-                .expect("Not initialized SETTING_JSON")
-                .write()
-                .unwrap();
-
-            *lock = setting_json;
-        }
 
         let mut file = File::create(json_path).await?;
         file.write_all(json_string.as_bytes()).await?;
@@ -160,7 +133,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> anyhow::Result<()> {
         create_dir_all("appdata").await?;
-        SettingJson::init("appdata/setting.json").await?;
+        dbg!(SettingJson::init("appdata/setting.json").await?);
 
         Ok(())
     }
