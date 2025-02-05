@@ -8,6 +8,15 @@ pub fn setup_logger() {
     let env_level_str = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
     let env_levelfilter = env_level_str.parse().unwrap_or_else(|_| LevelFilter::Info);
 
+    match env_levelfilter {
+        LevelFilter::Debug | LevelFilter::Trace => {
+            env_logger::init();
+            return;
+        }
+
+        _ => (),
+    }
+
     Builder::from_env(env_level)
         .filter_level(LevelFilter::Off)
         .filter_module("sonorust", env_levelfilter)
