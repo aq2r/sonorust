@@ -1,14 +1,14 @@
+use std::sync::RwLock;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use either::Either;
 use engtokana::EngToKana;
 use infer_api::{Sbv2PythonClient, Sbv2RustClient, Sbv2RustDownloads, Sbv2RustError};
 use serenity::all::GatewayError::DisallowedGatewayIntents;
+use serenity::all::{Context, Ready};
 use serenity::{
     all::{EventHandler, GatewayIntents},
-    async_trait,
-    prelude::RwLock,
-    Client,
+    async_trait, Client,
 };
 use songbird::SerenityInit;
 use sonorust_setting::{InferUse, SettingJson};
@@ -19,7 +19,9 @@ struct Handler {
 }
 
 #[async_trait]
-impl EventHandler for Handler {}
+impl EventHandler for Handler {
+    async fn ready(&self, ctx: Context, ready: Ready) {}
+}
 
 #[tokio::main]
 async fn main() {
@@ -141,33 +143,63 @@ async fn main() {
         }
     };
 
-    let mut client = Client::builder(&setting_json.bot_token, GatewayIntents::all())
-        .event_handler(Handler {
-            setting_json: Arc::new(RwLock::new(setting_json)),
-            infer_client: Arc::new(RwLock::new(infer_client)),
-        })
-        .register_songbird()
-        .await
-        .expect("Can't create client");
+    let setting_json = Arc::new(RwLock::new(setting_json));
+    let infer_client = Arc::new(RwLock::new(infer_client));
 
-    let result = client.start().await;
+    loop {
+        let bot_token = {
+            let lock = setting_json.read().unwrap();
+            lock.bot_token.clone()
+        };
 
-    match result {
-        // Intents が足りてなかった場合
-        Err(serenity::Error::Gateway(DisallowedGatewayIntents)) => {
-            log::error!(
-                "Missing intent, please change the settings in the Discord Developer Portal. \
+        let mut client = Client::builder(&bot_token, GatewayIntents::all())
+            .event_handler(Handler {
+                setting_json: setting_json.clone(),
+                infer_client: infer_client.clone(),
+            })
+            .register_songbird()
+            .await
+            .expect("Can't create client");
+
+        let result = client.start().await;
+
+        match result {
+            // Intents が足りてなかった場合
+            Err(serenity::Error::Gateway(DisallowedGatewayIntents)) => {
+                log::error!(
+                    "Missing intent, please change the settings in the Discord Developer Portal. \
                 (https://discord.com/developers/applications)"
-            );
-            tokio::time::sleep(Duration::from_secs(10)).await;
-        }
+                );
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                break;
+            }
 
-        // ログインできなかった場合
-        Err(_) => {
-            log::error!("Login failed. Fix Discord Bot Token.");
-            tokio::time::sleep(Duration::from_secs(10)).await;
-        }
+            // ログインできなかった場合
+            Err(_) => {
+                log::error!("Login failed. Input Discord Bot Token.");
+                tokio::time::sleep(Duration::from_secs(1)).await;
 
-        Ok(_) => (),
+                let token = SettingJson::token_reinput()
+                    .await
+                    .expect("Failed token input");
+
+                {
+                    let cloned = {
+                        let mut lock = setting_json.write().unwrap();
+                        lock.bot_token = token;
+
+                        lock.clone()
+                    };
+
+                    SettingJson::write_json("appdata/setting.json", &cloned)
+                        .await
+                        .expect("Failed write json");
+                }
+
+                continue;
+            }
+
+            Ok(_) => break,
+        }
     }
 }

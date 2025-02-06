@@ -1,5 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::{
+    io::{stdin, stdout, Write as _},
+    path::{Path, PathBuf},
+};
 
+use crossterm::{
+    cursor::{MoveToColumn, MoveUp},
+    execute,
+    terminal::{Clear, ClearType},
+};
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt};
 
@@ -104,6 +112,28 @@ impl SettingJson {
         };
 
         Ok(setting_json)
+    }
+
+    pub async fn token_reinput() -> anyhow::Result<String> {
+        print!("Your Bot Token: ");
+        stdout().flush()?;
+
+        let mut buffer = String::new();
+        stdin().read_line(&mut buffer)?;
+
+        let bot_token = buffer.trim().to_string();
+
+        // 入力内容を書き換え
+        execute!(
+            std::io::stdout(),
+            MoveUp(1),
+            Clear(ClearType::FromCursorDown),
+            MoveToColumn(0)
+        )?;
+        println!("Your Bot Token: {}", "*".repeat(bot_token.len()));
+        stdout().flush()?;
+
+        Ok(bot_token)
     }
 
     pub async fn write_json<P>(json_path: P, setting_json: &SettingJson) -> anyhow::Result<()>
