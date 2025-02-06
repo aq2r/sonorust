@@ -1,13 +1,21 @@
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use either::Either;
+use engtokana::EngToKana;
 use infer_api::{Sbv2PythonClient, Sbv2RustClient, Sbv2RustDownloads, Sbv2RustError};
-use serenity::{all::EventHandler, async_trait, prelude::RwLock};
+use serenity::all::GatewayError::DisallowedGatewayIntents;
+use serenity::{
+    all::{EventHandler, GatewayIntents},
+    async_trait,
+    prelude::RwLock,
+    Client,
+};
+use songbird::SerenityInit;
 use sonorust_setting::{InferUse, SettingJson};
 
 struct Handler {
-    setting_json: Arc<RwLock<SettingJson>>,
-    infer_client: Arc<RwLock<Either<Sbv2PythonClient, Sbv2RustClient>>>,
+    pub setting_json: Arc<RwLock<SettingJson>>,
+    pub infer_client: Arc<RwLock<Either<Sbv2PythonClient, Sbv2RustClient>>>,
 }
 
 #[async_trait]
@@ -44,10 +52,21 @@ async fn main() {
         .await
         .expect("Failed init json");
 
+    // カタカナ読み辞書の初期化
+    EngToKana::download_and_init_dic("appdata/downloads")
+        .await
+        .expect("Failed init engtokana dict");
+
+    // データベースの初期化
+    sonorust_db::init_database("appdata/database.db")
+        .await
+        .expect("Failed init database");
+
+    // 推論部分の初期化
     let infer_client: Either<Sbv2PythonClient, Sbv2RustClient> = match setting_json.infer_use {
         InferUse::Python => {
             // windowsの場合のみsbv2の自動起動に対応
-            if let Some(path) = setting_json.sbv2_path {
+            if let Some(path) = &setting_json.sbv2_path {
                 if cfg!(target_os = "windows") {
                     Sbv2PythonClient::launch_api_windows(
                         path,
@@ -117,7 +136,38 @@ async fn main() {
                 _ => panic!("Failed create Sbv2RustClient"),
             };
 
+            log::info!("Preparing complete.");
             Either::Right(rust_client)
         }
     };
+
+    let mut client = Client::builder(&setting_json.bot_token, GatewayIntents::all())
+        .event_handler(Handler {
+            setting_json: Arc::new(RwLock::new(setting_json)),
+            infer_client: Arc::new(RwLock::new(infer_client)),
+        })
+        .register_songbird()
+        .await
+        .expect("Can't create client");
+
+    let result = client.start().await;
+
+    match result {
+        // Intents が足りてなかった場合
+        Err(serenity::Error::Gateway(DisallowedGatewayIntents)) => {
+            log::error!(
+                "Missing intent, please change the settings in the Discord Developer Portal. \
+                (https://discord.com/developers/applications)"
+            );
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
+
+        // ログインできなかった場合
+        Err(_) => {
+            log::error!("Login failed. Fix Discord Bot Token.");
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
+
+        Ok(_) => (),
+    }
 }
