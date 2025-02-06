@@ -3,5 +3,4 @@ appdata
 BOT_TOKEN
 bep-eng.dic
 settings.json
-/deny.toml
 /crates/infer_api/sbv2api_models
