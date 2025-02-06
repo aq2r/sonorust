@@ -13,6 +13,7 @@ impl UserDatabase {
         T: Into<UserId>,
     {
         let user_id: UserId = user_id.into();
+        log::debug!("Access User Database Get - ID: {user_id}");
 
         let pool = DB_POOL.get().expect("Not initialaized DB_POOL");
         let mut tx = pool.begin().await?;
@@ -38,6 +39,8 @@ impl UserDatabase {
     }
 
     async fn update(userdata: UserData) -> Result<(), sqlx::Error> {
+        log::debug!("Access User Database Update - ID: {}", userdata.user_id);
+
         let pool = DB_POOL.get().expect("Not initialaized DB_POOL");
         let mut tx = pool.begin().await?;
 

@@ -1,0 +1,8 @@
+[package]
+name = "sonorust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serenity.workspace = true
+songbird.workspace = true

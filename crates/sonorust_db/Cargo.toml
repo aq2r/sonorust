@@ -8,3 +8,4 @@ sqlx.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 serenity.workspace = true
+log.workspace = true

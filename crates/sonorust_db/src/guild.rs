@@ -34,6 +34,7 @@ impl GuildDatabase {
         T: Into<GuildId>,
     {
         let guild_id: GuildId = guild_id.into();
+        log::debug!("Access Guild Database Get - ID: {guild_id}");
 
         let pool = DB_POOL.get().expect("Not initialaized DB_POOL");
         let mut tx = pool.begin().await?;
@@ -147,6 +148,8 @@ impl GuildDatabase {
     }
 
     async fn update(guilddata: GuildData) -> Result<(), sqlx::Error> {
+        log::debug!("Access Guild Database Update - ID: {}", guilddata.guild_id);
+
         let pool = DB_POOL.get().expect("Not initialaized DB_POOL");
         let mut tx = pool.begin().await?;
 
