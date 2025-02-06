@@ -4,5 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+engtokana.workspace = true
+infer_api.workspace = true
+sonorust_db.workspace = true
+sonorust_logger.workspace = true
+sonorust_setting.workspace = true
+langrustang.workspace = true
+eq_uilibrium.workspace = true
+
 serenity.workspace = true
 songbird.workspace = true
+either.workspace = true
+tokio.workspace = true
+log.workspace = true

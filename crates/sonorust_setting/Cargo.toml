@@ -10,3 +10,4 @@ tokio.workspace = true
 anyhow.workspace = true
 dialoguer.workspace = true
 crossterm.workspace = true
+log.workspace = true

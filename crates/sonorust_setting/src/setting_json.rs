@@ -91,6 +91,7 @@ impl SettingJson {
 
                 // 指定されたパスにjsonがなかった場合作成
                 Err(_) => {
+                    log::info!("Perform the initial setting.");
                     let setting_json = crate::ask::ask_to_create_setting_json()?;
 
                     let json_string = serde_json::to_string_pretty(&setting_json)?;
@@ -105,7 +106,14 @@ impl SettingJson {
         Ok(setting_json)
     }
 
-    pub async fn write_json<P>(json_path: P, setting_json: SettingJson) -> anyhow::Result<()>
+    pub async fn token_reinput<P>(json_path: P, setting_json: &SettingJson) -> anyhow::Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        todo!()
+    }
+
+    pub async fn write_json<P>(json_path: P, setting_json: &SettingJson) -> anyhow::Result<()>
     where
         P: AsRef<Path>,
     {

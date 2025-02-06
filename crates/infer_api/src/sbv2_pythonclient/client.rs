@@ -210,9 +210,18 @@ impl Sbv2PythonClient {
     {
         let sbv2_path = sbv2_path.as_ref();
 
+        // すでに起動しているか確かめる
+        let client = reqwest::Client::new();
+        let url = format!("http://{host}:{port}/");
+
+        if let Ok(_) = client.get(&url).send().await {
+            return Ok(());
+        }
+
         let python_path = sbv2_path.join("venv/Scripts/python.exe");
         let api_py_path = sbv2_path.join("server_fastapi.py");
 
+        log::info!("Starting SBV2 API...");
         let mut child = process::Command::new("cmd")
             .args([
                 "/C",
@@ -226,13 +235,14 @@ impl Sbv2PythonClient {
         child.wait().await?;
 
         // 接続を試す
-        let client = reqwest::Client::new();
-        let url = format!("http://{host}:{port}/");
 
         const MAX_RETRIES: u32 = 10;
         for _ in 0..=MAX_RETRIES {
             match client.get(&url).send().await {
-                Ok(_) => break,
+                Ok(_) => {
+                    log::info!("API is started.");
+                    break;
+                }
                 Err(_) => {
                     tokio::time::sleep(Duration::from_secs(5)).await;
                 }

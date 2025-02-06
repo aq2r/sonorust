@@ -33,27 +33,7 @@ impl Sbv2RustClient {
         let modelfolder_path = modelfolder_path.as_ref();
         let max_model_load_count = max_model_load_count.unwrap_or(u64::MAX);
 
-        let mut model_paths = vec![];
-        let mut entries = tokio::fs::read_dir(modelfolder_path).await?;
-        while let Ok(Some(entry)) = entries.next_entry().await {
-            let path = entry.path();
-
-            let Some(extention) = path.extension() else {
-                continue;
-            };
-
-            if extention != "sbv2" {
-                continue;
-            }
-
-            if let Some(file_name) = path.file_stem() {
-                log::debug!("Find model: {file_name:?}");
-                model_paths.push(Sbv2RustModel {
-                    name: file_name.to_string_lossy().to_string(),
-                    path,
-                });
-            }
-        }
+        let model_paths = Self::get_model_paths_from_folder(modelfolder_path).await?;
 
         if model_paths.len() == 0 {
             log::debug!("Model Not Found");
@@ -78,6 +58,43 @@ impl Sbv2RustClient {
         })
     }
 
+    async fn get_model_paths_from_folder<P>(
+        modelfolder_path: P,
+    ) -> Result<Vec<Sbv2RustModel>, Sbv2RustError>
+    where
+        P: AsRef<Path>,
+    {
+        log::debug!("Model find from: {:?}", modelfolder_path.as_ref());
+        let mut model_paths = vec![];
+
+        let mut entries = tokio::fs::read_dir(modelfolder_path).await?;
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+
+            let Some(extention) = path.extension() else {
+                continue;
+            };
+
+            if extention != "sbv2" {
+                continue;
+            }
+
+            if let Some(file_name) = path.file_stem() {
+                log::debug!("Find model: {file_name:?}");
+                model_paths.push(Sbv2RustModel {
+                    name: file_name.to_string_lossy().to_string(),
+                    path,
+                });
+            }
+        }
+
+        Ok(model_paths)
+    }
+
+    pub async fn get_modelinfo(&self) -> &Vec<Sbv2RustModel> {
+        &self.models
+    }
+
     pub fn get_valid_model(&self, model_name: &str, default_model: &str) -> &Sbv2RustModel {
         match self.models.iter().find(|model| model.name == model_name) {
             Some(model) => model,
@@ -86,6 +103,33 @@ impl Sbv2RustClient {
                 None => self.models.get(0).expect("Model Not Found"),
             },
         }
+    }
+
+    pub async fn update_model<P>(&mut self, modelfolder_path: P) -> Result<(), Sbv2RustError>
+    where
+        P: AsRef<Path>,
+    {
+        let models = Self::get_model_paths_from_folder(modelfolder_path).await?;
+
+        if models.len() == 0 {
+            return Err(Sbv2RustError::ModelNotFound);
+        }
+
+        // すでに読み込まれているモデルをアンロード
+        let arc = self.model_holder.clone();
+        let send_loaded_models = std::mem::replace(&mut self.loaded_models, vec![]);
+
+        tokio::task::spawn_blocking(move || {
+            let mut model_holder = arc.lock().unwrap();
+
+            for i in send_loaded_models {
+                log::debug!("Model unload: {}", i.name);
+                model_holder.unload(&i.name);
+            }
+        });
+
+        self.models = models;
+        Ok(())
     }
 
     /// 存在しないモデル名を指定しても存在するモデルに変換してから推論を行う
@@ -126,9 +170,6 @@ impl Sbv2RustClient {
             self.loaded_models.push(model.clone());
         }
 
-        let mut option = SynthesizeOptions::default();
-        option.length_scale = length;
-
         // 推論は他スレッドに逃がして行う
         let arc = self.model_holder.clone();
         let text = text.to_owned();
@@ -136,7 +177,10 @@ impl Sbv2RustClient {
         let result = tokio::task::spawn_blocking(move || {
             let mut lock = arc.lock().unwrap();
 
-            log::debug!("synthesize: {text}");
+            let mut option = SynthesizeOptions::default();
+            option.length_scale = length;
+
+            log::debug!("synthesize - Model: {} - Content: {text}", model.name);
             lock.synthesize(&model.name, &text, 0, 0, option)
                 .map_err(|err| Sbv2RustError::Sbv2CoreError(err.to_string()))
         })
@@ -163,8 +207,8 @@ mod tests {
         env_logger::init();
 
         let client = Sbv2RustClient::new_from_model_folder(
-            "appdata/deberta.onnx",
-            "appdata/tokenizer.json",
+            "appdata/downloads/deberta.onnx",
+            "appdata/downloads/tokenizer.json",
             "sbv2api_models",
             Some(5),
         )
@@ -181,12 +225,36 @@ mod tests {
         env_logger::init();
 
         let mut client = Sbv2RustClient::new_from_model_folder(
-            "appdata/deberta.onnx",
-            "appdata/tokenizer.json",
+            "appdata/downloads/deberta.onnx",
+            "appdata/downloads/tokenizer.json",
             "sbv2api_models",
             Some(1),
         )
         .await?;
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        let _ = client.infer("text", "model1", 1.0, "model1").await?;
+        create_dir_all("appdata").await?;
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        let _ = client.infer("text", "model2", 1.0, "model1").await?;
+        create_dir_all("appdata").await?;
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        let result = client.infer("text", "Unknown", 1.0, "model1").await?;
+        create_dir_all("appdata").await?;
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        let mut file = File::create("appdata/result.wav").await?;
+        file.write_all(&result).await?;
+
+        // モデル読み込みチェック
+        println!("model reload");
+        client.update_model("sbv2api_models").await?;
 
         tokio::time::sleep(Duration::from_secs(5)).await;
 

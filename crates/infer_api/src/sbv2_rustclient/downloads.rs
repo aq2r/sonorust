@@ -202,13 +202,15 @@ impl Sbv2RustDownloads {
         }
 
         // 環境変数に設定
-        let ort_dylib_str = std::env::current_dir()?
-            .join(ort_dylib_folder_path)
-            .join("lib/onnxruntime.dll")
-            .to_string_lossy()
-            .replace("\\", "/");
+        if is_x86_win {
+            let ort_dylib_str = std::env::current_dir()?
+                .join(ort_dylib_folder_path)
+                .join("lib/onnxruntime.dll")
+                .to_string_lossy()
+                .replace("\\", "/");
 
-        std::env::set_var("ORT_DYLIB_PATH", ort_dylib_str);
+            std::env::set_var("ORT_DYLIB_PATH", ort_dylib_str);
+        }
 
         Ok(())
     }

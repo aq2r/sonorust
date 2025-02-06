@@ -10,7 +10,15 @@ pub fn setup_logger() {
 
     match env_levelfilter {
         LevelFilter::Debug | LevelFilter::Trace => {
-            env_logger::init();
+            Builder::from_env(env_level)
+                .filter_level(LevelFilter::Off)
+                .filter_module("sonorust", env_levelfilter)
+                .filter_module("sonorust_db", env_levelfilter)
+                .filter_module("sonorust_setting", env_levelfilter)
+                .filter_module("infer_api", env_levelfilter)
+                .filter_module("engtokana", env_levelfilter)
+                .default_format()
+                .init();
             return;
         }
 
@@ -20,8 +28,10 @@ pub fn setup_logger() {
     Builder::from_env(env_level)
         .filter_level(LevelFilter::Off)
         .filter_module("sonorust", env_levelfilter)
-        .filter_module("setting_json", env_levelfilter)
+        .filter_module("sonorust_db", env_levelfilter)
+        .filter_module("sonorust_setting", env_levelfilter)
         .filter_module("infer_api", env_levelfilter)
+        .filter_module("engtokana", env_levelfilter)
         .format(move |buf, record| {
             let level = record.level();
             let level_color = match level {

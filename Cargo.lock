@@ -896,6 +896,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "diff"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1062,6 +1068,16 @@ dependencies = [
  "env_filter",
  "humantime",
  "log",
+]
+
+[[package]]
+name = "eq_uilibrium"
+version = "0.2.0"
+source = "git+https://github.com/aq2r/eq-uilibrium?tag=v0.2.0#96048a41b6301d1a55afc014d4bb4a86babf2378"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.96",
 ]
 
 [[package]]
@@ -2152,6 +2168,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "langrustang"
+version = "1.1.4"
+source = "git+https://github.com/aq2r/langrustang?tag=v1.1.4#b9e4a91cb335388b698a5362f90aea6f3166533d"
+dependencies = [
+ "anyhow",
+ "pretty_assertions",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_yaml",
+ "syn 2.0.96",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3137,6 +3167,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pretty_assertions"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
+dependencies = [
+ "diff",
+ "yansi",
+]
+
+[[package]]
 name = "primal-check"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3857,6 +3897,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_yaml"
+version = "0.9.34+deprecated"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
+]
+
+[[package]]
 name = "serenity"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4139,8 +4192,18 @@ dependencies = [
 name = "sonorust"
 version = "0.1.0"
 dependencies = [
+ "either",
+ "engtokana",
+ "eq_uilibrium",
+ "infer_api",
+ "langrustang",
+ "log",
  "serenity",
  "songbird",
+ "sonorust_db",
+ "sonorust_logger",
+ "sonorust_setting",
+ "tokio",
 ]
 
 [[package]]
@@ -4170,6 +4233,7 @@ dependencies = [
  "anyhow",
  "crossterm",
  "dialoguer",
+ "log",
  "serde",
  "serde_json",
  "tokio",
@@ -5277,6 +5341,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "unsafe-libyaml"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
+
+[[package]]
 name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5832,6 +5902,12 @@ name = "yada"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aed111bd9e48a802518765906cbdadf0b45afb72b9c81ab049a3b86252adffdd"
+
+[[package]]
+name = "yansi"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yoke"

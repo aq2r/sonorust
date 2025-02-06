@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "crates/engtokana",
-    "crates/infer_api", "crates/sonorust",
+    "crates/infer_api",
+    "crates/sonorust",
     "crates/sonorust_db",
     "crates/sonorust_logger",
     "crates/sonorust_setting",
@@ -10,8 +11,10 @@ resolver = "2"
 
 [workspace.dependencies]
 engtokana = { path = "crates/engtokana" }
+infer_api = { path = "crates/infer_api" }
 sonorust_db = { path = "crates/sonorust_db" }
 sonorust_logger = { path = "crates/sonorust_logger" }
+sonorust_setting = { path = "crates/sonorust_setting" }
 langrustang = { git = "https://github.com/aq2r/langrustang", tag = "v1.1.4" }
 eq_uilibrium = { git = "https://github.com/aq2r/eq-uilibrium", tag = "v0.2.0" }
 
@@ -39,6 +42,7 @@ sbv2_core = { git = "https://github.com/aq2r/sbv2_core", features = [
 ] }
 indicatif = "0.17.11"
 uuid = { version = "1.13.1", features = ["v4"] }
+either = "1.13.0"
 
 serenity = { version = "0.12.4", default-features = false, features = [
     "client",

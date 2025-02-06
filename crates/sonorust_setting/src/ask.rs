@@ -132,6 +132,13 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
             let onnx_model_path = {
                 let inputed: String = Input::new()
                     .with_prompt("Enter the folder path where the ***.sbv2 file")
+                    .validate_with(
+                        // 存在するパスのみ指定できるようにする
+                        |input: &String| match PathBuf::from(input.clone()).exists() {
+                            true => Ok(()),
+                            false => Err("Specify an existing path."),
+                        },
+                    )
                     .interact_text()
                     .unwrap();
 
