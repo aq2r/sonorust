@@ -64,6 +64,7 @@ pub struct SettingJson {
     // rust
     pub onnx_model_path: PathBuf,
     pub max_load_model_count: Option<u32>,
+    pub is_gpu_version_runtime: bool,
 }
 
 impl SettingJson {

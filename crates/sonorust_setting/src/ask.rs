@@ -124,6 +124,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
                 infer_lang,
                 onnx_model_path: PathBuf::new(),
                 max_load_model_count: None,
+                is_gpu_version_runtime: false,
             }
         }
 
@@ -143,6 +144,29 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
                 .interact_text()
                 .unwrap();
 
+            // onnxruntimeの自動ダウンロードはwindowsのみ対応
+            let is_gpu_version_runtime = {
+                let is_x86_win = cfg!(target_os = "windows") && cfg!(target_arch = "x86_64");
+
+                match is_x86_win {
+                    true => {
+                        let options = ["Cpu", "Cuda"];
+                        let index = Select::new()
+                            .with_prompt("Select Infer Device")
+                            .items(&options)
+                            .interact()
+                            .unwrap();
+
+                        match index {
+                            0 => false,
+                            1 => true,
+                            _ => unreachable!(),
+                        }
+                    }
+                    false => false,
+                }
+            };
+
             SettingJson {
                 bot_token,
                 read_limit,
@@ -156,6 +180,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
                 infer_lang: InferLang::Ja,
                 onnx_model_path,
                 max_load_model_count: Some(max_load_model_count),
+                is_gpu_version_runtime,
             }
         }
     };
