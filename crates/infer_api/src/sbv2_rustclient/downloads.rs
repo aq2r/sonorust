@@ -60,7 +60,16 @@ impl Sbv2RustDownloads {
         }
 
         tokio::fs::rename(&tmp_file, &download_to_path).await?;
-        progress_bar.finish_with_message("Download completed");
+
+        progress_bar.set_style(
+            ProgressStyle::default_bar()
+                .template(&format!(
+                    "✔ Download Complete: {download_displayname} [{{elapsed_precise}}]"
+                ))
+                .unwrap()
+                .progress_chars("->-"),
+        );
+        progress_bar.finish();
 
         Ok(())
     }
@@ -134,7 +143,11 @@ impl Sbv2RustDownloads {
                 }
             }
 
-            spinner.set_message("Zip extracted.");
+            spinner.set_style(
+                ProgressStyle::default_spinner()
+                    .template("✔ Zip extracted.")
+                    .unwrap(),
+            );
             spinner.finish();
 
             Ok(())
@@ -215,15 +228,17 @@ mod tests {
 
         let download_client = Sbv2RustDownloads::new();
 
-        let (r1, r2, r3) = tokio::join!(
+        let (r1, r2) = tokio::join!(
             download_client.download_debertaonnx(download_to_folder),
             download_client.download_tokenizer(download_to_folder),
-            download_client.download_and_set_onnxruntime(download_to_folder, false)
         );
 
         r1?;
         r2?;
-        r3?;
+
+        download_client
+            .download_and_set_onnxruntime(download_to_folder, false)
+            .await?;
 
         Ok(())
     }
