@@ -37,6 +37,8 @@ sbv2_core = { git = "https://github.com/aq2r/sbv2_core", features = [
     "cuda",
     "cuda_tf32",
 ] }
+indicatif = "0.17.11"
+uuid = { version = "1.13.1", features = ["v4"] }
 
 serenity = { version = "0.12.4", default-features = false, features = [
     "client",
