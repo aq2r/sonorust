@@ -1,3 +1,11 @@
+langrustang::i18n!("./lang/bot_lang.yaml");
+
+mod commands;
+mod crate_extensions;
+mod errors;
+mod registers;
+
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::RwLock;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
@@ -5,7 +13,7 @@ use either::Either;
 use engtokana::EngToKana;
 use infer_api::{Sbv2PythonClient, Sbv2RustClient, Sbv2RustDownloads, Sbv2RustError};
 use serenity::all::GatewayError::DisallowedGatewayIntents;
-use serenity::all::{Context, Ready};
+use serenity::all::{ChannelId, Context, GuildId, Interaction, Message, Ready, VoiceState};
 use serenity::{
     all::{EventHandler, GatewayIntents},
     async_trait, Client,
@@ -13,14 +21,44 @@ use serenity::{
 use songbird::SerenityInit;
 use sonorust_setting::{InferUse, SettingJson};
 
+type ArcRwLock<T> = Arc<RwLock<T>>;
+
 struct Handler {
-    pub setting_json: Arc<RwLock<SettingJson>>,
-    pub infer_client: Arc<RwLock<Either<Sbv2PythonClient, Sbv2RustClient>>>,
+    pub setting_json: ArcRwLock<SettingJson>,
+    pub infer_client: ArcRwLock<Either<Sbv2PythonClient, Sbv2RustClient>>,
+    pub read_channels: ArcRwLock<HashMap<GuildId, HashSet<ChannelId>>>,
+    pub channel_queues: ArcRwLock<HashMap<GuildId, VecDeque<Vec<u8>>>>,
 }
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, ctx: Context, ready: Ready) {}
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        registers::ready(&ctx, &ready).await;
+    }
+
+    async fn message(&self, ctx: Context, msg: Message) {
+        if let Err(err) = registers::message(self, &ctx, &msg).await {
+            log::error!("Error on message: {err}");
+        };
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        match &interaction {
+            Interaction::Command(inter) => {
+                registers::slash_command(self, &ctx, &inter).await;
+            }
+
+            Interaction::Component(inter) => {
+                registers::component(self, &ctx, &inter).await;
+            }
+
+            _ => (),
+        }
+    }
+
+    async fn voice_state_update(&self, ctx: Context, old: Option<VoiceState>, new: VoiceState) {
+        registers::voice_state_update(self, &ctx, &old, &new).await;
+    }
 }
 
 #[tokio::main]
@@ -145,6 +183,8 @@ async fn main() {
 
     let setting_json = Arc::new(RwLock::new(setting_json));
     let infer_client = Arc::new(RwLock::new(infer_client));
+    let read_channels = Arc::new(RwLock::new(HashMap::new()));
+    let channel_queues = Arc::new(RwLock::new(HashMap::new()));
 
     loop {
         let bot_token = {
@@ -156,6 +196,8 @@ async fn main() {
             .event_handler(Handler {
                 setting_json: setting_json.clone(),
                 infer_client: infer_client.clone(),
+                read_channels: read_channels.clone(),
+                channel_queues: channel_queues.clone(),
             })
             .register_songbird()
             .await
@@ -167,9 +209,9 @@ async fn main() {
             // Intents が足りてなかった場合
             Err(serenity::Error::Gateway(DisallowedGatewayIntents)) => {
                 log::error!(
-                    "Missing intent, please change the settings in the Discord Developer Portal. \
-                (https://discord.com/developers/applications)"
+                    "Missing intent, please change the settings in the Discord Developer Portal. (https://discord.com/developers/applications)"
                 );
+
                 tokio::time::sleep(Duration::from_secs(10)).await;
                 break;
             }

@@ -326,6 +326,18 @@ wav.fail_infer:
   ja: APIが起動していないため音声を生成できませんでした。
   en: Audio could not be generated because the API was not launch.
 
+# Autojoin
+autojoin.command.name:
+  all: autojoin
+
+autojoin.command.description:
+  ja: |-
+    VCへの自動参加の設定をします。
+    使用方法: `{}autojoin (voice_channel) (text_channel)`
+  en: |-
+    Sets automatic joining to VC.
+    Usage: `{}autojoin (voice_channel) (text_channel)`
+
 #____ Bot Messages ____#
 msg.attachments:
   ja: 添付ファイル
