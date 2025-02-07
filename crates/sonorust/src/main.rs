@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::RwLock;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
+use crate_extensions::rwlock::RwLockExt;
 use either::Either;
 use engtokana::EngToKana;
 use infer_api::{Sbv2PythonClient, Sbv2RustClient, Sbv2RustDownloads, Sbv2RustError};
@@ -20,12 +21,13 @@ use serenity::{
 };
 use songbird::SerenityInit;
 use sonorust_setting::{InferUse, SettingJson};
+use tokio::sync::RwLock as TokioRwLock;
 
 type ArcRwLock<T> = Arc<RwLock<T>>;
 
 struct Handler {
     pub setting_json: ArcRwLock<SettingJson>,
-    pub infer_client: ArcRwLock<Either<Sbv2PythonClient, Sbv2RustClient>>,
+    pub infer_client: Arc<TokioRwLock<Either<Sbv2PythonClient, Sbv2RustClient>>>,
     pub read_channels: ArcRwLock<HashMap<GuildId, HashSet<ChannelId>>>,
     pub channel_queues: ArcRwLock<HashMap<GuildId, VecDeque<Vec<u8>>>>,
 }
@@ -182,15 +184,12 @@ async fn main() {
     };
 
     let setting_json = Arc::new(RwLock::new(setting_json));
-    let infer_client = Arc::new(RwLock::new(infer_client));
+    let infer_client = Arc::new(TokioRwLock::new(infer_client));
     let read_channels = Arc::new(RwLock::new(HashMap::new()));
     let channel_queues = Arc::new(RwLock::new(HashMap::new()));
 
     loop {
-        let bot_token = {
-            let lock = setting_json.read().unwrap();
-            lock.bot_token.clone()
-        };
+        let bot_token = setting_json.with_read(|lock| lock.bot_token.clone());
 
         let mut client = Client::builder(&bot_token, GatewayIntents::all())
             .event_handler(Handler {

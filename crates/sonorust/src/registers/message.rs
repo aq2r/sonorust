@@ -1,10 +1,13 @@
 use std::{sync::OnceLock, time::Instant};
 
+use langrustang::lang_t;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
 
 use crate::{
     commands,
-    crate_extensions::{rwlock::RwLockExt, sonorust_setting::SettingJsonExt},
+    crate_extensions::{
+        infer_api::InferApiExt, rwlock::RwLockExt, sonorust_setting::SettingJsonExt,
+    },
     errors::SonorustError,
     Handler,
 };
@@ -80,8 +83,53 @@ async fn command_processing(
             let embed = commands::help(ctx, lang, prefix).await;
             eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
+
         "join" => {
             debug_log();
+
+            let result = commands::join(
+                handler,
+                ctx,
+                lang,
+                msg.guild_id,
+                msg.channel_id,
+                msg.author.id,
+            )
+            .await;
+
+            match result {
+                Ok(s) => {
+                    let help_embed = commands::help(ctx, lang, prefix).await;
+                    eq_uilibrium::send_msg!(
+                        msg.channel_id,
+                        &ctx.http,
+                        content = s,
+                        embed = help_embed
+                    )
+                    .await?;
+                }
+                Err(s) => {
+                    eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = s).await?;
+                }
+            };
+
+            // すでにボイスチャンネルに参加していた場合などは返す
+            if let Err(_) = result {
+                return Ok(());
+            };
+
+            // 音声再生
+            handler
+                .infer_client
+                .play_on_vc(
+                    handler,
+                    ctx,
+                    msg.guild_id,
+                    msg.channel_id,
+                    msg.author.id,
+                    lang_t!("join.connected", lang),
+                )
+                .await?;
         }
         "leave" => {
             debug_log();

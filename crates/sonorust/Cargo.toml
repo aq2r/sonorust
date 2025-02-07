@@ -20,3 +20,5 @@ tokio.workspace = true
 log.workspace = true
 thiserror.workspace = true
 sqlx.workspace = true
+anyhow.workspace = true
+symphonia.workspace = true
