@@ -2,6 +2,7 @@
 name = "sonorust"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 engtokana.workspace = true
@@ -17,3 +18,5 @@ songbird.workspace = true
 either.workspace = true
 tokio.workspace = true
 log.workspace = true
+thiserror.workspace = true
+sqlx.workspace = true
