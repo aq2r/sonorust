@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{crate_extensions::sonorust_setting::SettingJsonExt, errors::SonorustError, Handler};
+use crate::{errors::SonorustError, Handler};
 use either::Either;
 use infer_api::{Sbv2PythonClient, Sbv2PythonInferParam, Sbv2RustClient};
 use langrustang::lang_t;

@@ -1,4 +1,4 @@
-use std::sync::{LazyLock, OnceLock, RwLock};
+use std::sync::{OnceLock, RwLock};
 
 use sonorust_setting::{BotLang, SettingJson};
 
