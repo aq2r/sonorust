@@ -91,7 +91,7 @@ impl Sbv2RustClient {
         Ok(model_paths)
     }
 
-    pub async fn get_modelinfo(&self) -> &Vec<Sbv2RustModel> {
+    pub fn get_modelinfo(&self) -> &Vec<Sbv2RustModel> {
         &self.models
     }
 

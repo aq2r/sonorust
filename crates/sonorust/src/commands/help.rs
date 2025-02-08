@@ -1,5 +1,5 @@
 use langrustang::{format_t, lang_t};
-use serenity::all::{Context, CreateEmbed};
+use serenity::all::{Context, CreateCommand, CreateEmbed};
 
 use crate::_langrustang_autogen::Lang;
 
@@ -91,4 +91,8 @@ pub async fn help(ctx: &Context, lang: Lang, prefix: &str) -> CreateEmbed {
         .title(lang_t!("help.embed.title", lang))
         .fields(fields)
         .thumbnail(avatar_url)
+}
+
+pub fn create_command(lang: Lang) -> CreateCommand {
+    CreateCommand::new("help").description(lang_t!("help.command.description", lang))
 }

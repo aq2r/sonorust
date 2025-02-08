@@ -64,6 +64,10 @@ impl Sbv2PythonClient {
         })
     }
 
+    pub fn model_info(&self) -> &Sbv2PythonModelMap {
+        &self.model_info
+    }
+
     /// PythonのAPIに推論を送る
     ///
     /// 存在しないモデル名を指定しても存在するモデルに変換してから推論を行う

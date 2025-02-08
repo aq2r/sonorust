@@ -1,6 +1,7 @@
 use std::{sync::OnceLock, time::Instant};
 
-use langrustang::lang_t;
+use either::Either;
+use langrustang::{format_t, lang_t};
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
 
 use crate::{
@@ -133,21 +134,91 @@ async fn command_processing(
         }
         "leave" => {
             debug_log();
+
+            let text = commands::leave(handler, ctx, lang, msg.guild_id).await;
+            msg.channel_id.say(&ctx.http, text).await?;
         }
         "model" => {
             debug_log();
+
+            let (embed, components) = commands::model(handler, lang).await;
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
         }
         "speaker" => {
             debug_log();
+
+            let (embed, components) = commands::speaker(handler, msg.author.id, lang).await?;
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
         }
         "style" => {
             debug_log();
+
+            let (embed, components) = commands::style(handler, msg.author.id, lang).await?;
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
         }
         "length" => {
             debug_log();
+
+            // 数字部分を取得
+            let Some(length) = command_rest.get(0).map(|i| *i) else {
+                msg.channel_id
+                    .say(&ctx.http, format_t!("length.usage", lang, prefix))
+                    .await?;
+                return Ok(());
+            };
+
+            // 数字に変換できなければ返す
+            let Ok(length) = length.parse::<f64>() else {
+                msg.channel_id
+                    .say(&ctx.http, lang_t!("length.not_num", lang))
+                    .await?;
+                return Ok(());
+            };
+
+            // ユーザーデータを変更してメッセージを送信
+            let content = commands::length(msg.author.id, length, lang).await?;
+            msg.channel_id.say(&ctx.http, content).await?;
         }
         "wav" => {
             debug_log();
+
+            let mut splitn = msg.content.splitn(2, " ");
+
+            // 生成部分を取得
+            let Some(content) = splitn.nth(1) else {
+                msg.channel_id
+                    .say(&ctx.http, format_t!("wav.usage", lang, prefix))
+                    .await?;
+                return Ok(());
+            };
+
+            match commands::wav(handler, msg.author.id, content).await? {
+                Either::Left(attachment) => {
+                    eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, add_file = attachment)
+                        .await?
+                }
+                Either::Right(content) => {
+                    eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = content).await?
+                }
+            };
         }
         "dict" => {
             debug_log();
@@ -162,6 +233,12 @@ async fn command_processing(
             debug_log();
         }
         "autojoin" => {
+            debug_log();
+        }
+        "read_add" => {
+            debug_log();
+        }
+        "read_remove" => {
             debug_log();
         }
 
