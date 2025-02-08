@@ -260,12 +260,31 @@ async fn command_processing(
         }
         "autojoin" => {
             debug_log();
+
+            let (embed, components) =
+                commands::autojoin(ctx, msg.guild_id, msg.author.id, lang).await?;
+
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
         }
         "read_add" => {
             debug_log();
+
+            let content =
+                commands::read_add(handler, ctx, msg.guild_id, msg.channel_id, msg.author.id)?;
+            msg.channel_id.say(&ctx.http, content).await?;
         }
         "read_remove" => {
             debug_log();
+
+            let content =
+                commands::read_remove(handler, ctx, msg.guild_id, msg.channel_id, msg.author.id)?;
+            msg.channel_id.say(&ctx.http, content).await?;
         }
 
         _ => (),

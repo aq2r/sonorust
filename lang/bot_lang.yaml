@@ -338,6 +338,54 @@ autojoin.command.description:
     Sets automatic joining to VC.
     Usage: `{}autojoin (voice_channel) (text_channel)`
 
+autojoin.label.register:
+  all: register
+
+autojoin.embed.title:
+  ja: ボイスチャンネルへの自動参加設定
+  en: Automatic voice channel joining settings
+
+autojoin.unregistered:
+  ja: このサーバーではまだ何も登録されていません。
+  en: There is nothing registerd on this server yet.
+
+autojoin.too_many:
+  ja: 登録されているチャンネルが多すぎたため表示できませんでした。
+  en: There are too many registered channel to display.
+
+# read_add, read_remove
+read_add.failed:
+  ja: 登録できませんでした。
+  en: Could not be registered.
+
+read_add.registerd:
+  ja: このチャンネルを読み上げる対象に登録しました。
+  en: Registered to this channel for reading.
+
+read_add.already:
+  ja: すでに読み上げる対象に登録しています。
+  en: Already registered to be read aloud.
+
+read_remove.failed:
+  ja: 登録を解除できませんでした。
+  en: Could not be unregistered.
+
+read_remove.removed:
+  ja: このチャンネルを読み上げる対象から解除しました。
+  en: This channel has been removed from reading.
+
+read_remove.already:
+  ja: すでに読み上げる対象から解除しています。
+  en: Already been removed from the reading list.
+
+read_add_remove.user_notconnect:
+  ja: ボイスチャンネルに接続してから使用してください。
+  en: Connect to a voice channel before using.
+
+read_add_remove.bot_notconnect:
+  ja: ボイスチャンネルに接続していません。
+  en: Not connected to a voice channel.
+
 #____ Bot Messages ____#
 msg.attachments:
   ja: 添付ファイル
@@ -391,7 +439,7 @@ msg.failed.infer:
   en: |-
     Audio cannot be generated because the API is not running.
     Left the voice channel.
-  
+
 msg.bot_activity:
   ja: "{}join でボイスチャンネルに参加"
   en: "{}join to join a voice channel"
@@ -517,6 +565,9 @@ customid.dict.add:
 
 customid.dict.remove:
   all: dict_remove
+
+customid.autojoin.register:
+  all: autojoin_register
 
 customid.select.model:
   all: select_model
