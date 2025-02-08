@@ -246,6 +246,17 @@ async fn command_processing(
         }
         "server" => {
             debug_log();
+
+            let (embed, components) =
+                commands::server(ctx, msg.guild_id, msg.author.id, lang).await?;
+
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
         }
         "autojoin" => {
             debug_log();
