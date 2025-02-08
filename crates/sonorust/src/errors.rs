@@ -10,7 +10,10 @@ pub enum SonorustError {
 
     #[error("Sbv2PythonError: {0}")]
     Sbv2PythonError(#[from] Sbv2PythonError),
-    
+
     #[error("Sbv2RustError: {0}")]
     Sbv2RustError(#[from] Sbv2RustError),
+
+    #[error("GuildId is None")]
+    GuildIdIsNone,
 }

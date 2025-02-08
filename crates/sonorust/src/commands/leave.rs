@@ -1,5 +1,5 @@
 use langrustang::lang_t;
-use serenity::all::{Context, GuildId};
+use serenity::all::{Context, CreateCommand, GuildId};
 
 use crate::{Handler, _langrustang_autogen::Lang, crate_extensions::rwlock::RwLockExt};
 
@@ -39,4 +39,8 @@ pub async fn leave(
         .with_write(|lock| lock.remove(&guild_id));
 
     lang_t!("leave.disconnected", lang)
+}
+
+pub fn create_command(lang: Lang) -> CreateCommand {
+    CreateCommand::new("leave").description(lang_t!("leave.command.description", lang))
 }

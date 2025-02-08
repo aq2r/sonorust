@@ -1,13 +1,16 @@
 use either::Either;
 use infer_api::Sbv2PythonInferParam;
 use langrustang::lang_t;
-use serenity::all::{CreateAttachment, UserId};
+use serenity::all::{
+    CommandOptionType, CreateAttachment, CreateCommand, CreateCommandOption, UserId,
+};
 use sonorust_db::UserData;
 
 use crate::{
     crate_extensions::{rwlock::RwLockExt, sonorust_setting::SettingJsonExt},
     errors::SonorustError,
     Handler,
+    _langrustang_autogen::Lang,
 };
 
 pub async fn wav(
@@ -55,4 +58,17 @@ pub async fn wav(
         Ok(data) => Ok(Either::Left(CreateAttachment::bytes(data, "audio.mp3"))),
         Err(_) => Ok(Either::Right(lang_t!("wav.fail_infer", lang))),
     }
+}
+
+pub fn create_command(lang: Lang) -> CreateCommand {
+    CreateCommand::new("wav")
+        .description(lang_t!("wav.command.description", lang))
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::String,
+                lang_t!("wav.option.content"),
+                lang_t!("wav.option.content.description", lang),
+            )
+            .required(true),
+        )
 }

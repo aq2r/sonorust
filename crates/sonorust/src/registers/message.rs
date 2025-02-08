@@ -222,12 +222,27 @@ async fn command_processing(
         }
         "dict" => {
             debug_log();
+
+            let (embed, components) = commands::dict(ctx, msg.guild_id, lang).await?;
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
         }
         "now" => {
             debug_log();
+
+            let embed = commands::now(handler, &msg.author, lang).await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
         "reload" => {
             debug_log();
+
+            let content = commands::reload(handler, ctx, msg.author.id, lang).await;
+            msg.channel_id.say(&ctx.http, content).await?;
         }
         "server" => {
             debug_log();
