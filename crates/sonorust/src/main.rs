@@ -35,7 +35,7 @@ struct Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        registers::ready(&ctx, &ready).await;
+        registers::ready(self, &ctx, &ready).await;
     }
 
     async fn message(&self, ctx: Context, msg: Message) {

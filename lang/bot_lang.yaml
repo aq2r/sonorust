@@ -391,6 +391,10 @@ msg.failed.infer:
   en: |-
     Audio cannot be generated because the API is not running.
     Left the voice channel.
+  
+msg.bot_activity:
+  ja: "{}join でボイスチャンネルに参加"
+  en: "{}join to join a voice channel"
 
 #____ Guild Settings value ____#
 
