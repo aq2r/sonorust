@@ -1,6 +1,7 @@
 langrustang::i18n!("./lang/bot_lang.yaml");
 
 mod commands;
+mod components;
 mod crate_extensions;
 mod errors;
 mod registers;
