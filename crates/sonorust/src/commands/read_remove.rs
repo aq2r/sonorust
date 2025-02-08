@@ -1,7 +1,10 @@
 use langrustang::lang_t;
-use serenity::all::{ChannelId, Context, GuildId, UserId};
+use serenity::all::{ChannelId, Context, CreateCommand, GuildId, UserId};
 
-use crate::{crate_extensions::sonorust_setting::SettingJsonExt, errors::SonorustError, Handler};
+use crate::{
+    crate_extensions::sonorust_setting::SettingJsonExt, errors::SonorustError, Handler,
+    _langrustang_autogen::Lang,
+};
 
 pub fn read_remove(
     handler: &Handler,
@@ -42,4 +45,8 @@ pub fn read_remove(
             None => return Ok(lang_t!("read_add_remove.bot_notconnect", lang)),
         }
     }
+}
+
+pub fn create_command(lang: Lang) -> CreateCommand {
+    CreateCommand::new("read_remove").description(lang_t!("read_remove.command.description", lang))
 }

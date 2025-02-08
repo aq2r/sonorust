@@ -120,9 +120,15 @@ async fn main() {
                 }
             }
 
-            let python_client = Sbv2PythonClient::connect(&setting_json.host, setting_json.port)
-                .await
-                .expect("SBV2 API is not running");
+            let python_client =
+                match Sbv2PythonClient::connect(&setting_json.host, setting_json.port).await {
+                    Ok(client) => client,
+                    Err(_) => {
+                        log::error!("SBV2 API is not running");
+                        tokio::time::sleep(Duration::from_secs(10)).await;
+                        panic!("SBV2 API is not running")
+                    }
+                };
 
             Either::Left(python_client)
         }
