@@ -338,12 +338,13 @@ autojoin.command.description:
     Sets automatic joining to VC.
     Usage: `{}autojoin (voice_channel) (text_channel)`
 
-autojoin.label.register:
-  all: register
-
 autojoin.embed.title:
   ja: ボイスチャンネルへの自動参加設定
   en: Automatic voice channel joining settings
+
+autojoin.embed.footer:
+  ja: スラッシュコマンドから登録と解除を行えます。
+  en: Register and unregister using slash commands.
 
 autojoin.unregistered:
   ja: このサーバーではまだ何も登録されていません。

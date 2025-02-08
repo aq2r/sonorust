@@ -1,7 +1,7 @@
 use langrustang::lang_t;
 use serenity::all::{
-    ButtonStyle, Context, CreateActionRow, CreateButton, CreateCommand, CreateEmbed, GuildId,
-    UserId,
+    ButtonStyle, ChannelId, Context, CreateActionRow, CreateButton, CreateCommand, CreateEmbed,
+    CreateEmbedFooter, GuildId, UserId,
 };
 use sonorust_db::GuildData;
 
@@ -12,7 +12,9 @@ pub async fn autojoin(
     guild_id: Option<GuildId>,
     user_id: UserId,
     lang: Lang,
-) -> Result<(CreateEmbed, Vec<CreateActionRow>), SonorustError> {
+    voice_ch_id: Option<ChannelId>,
+    text_ch_id: Option<ChannelId>,
+) -> Result<CreateEmbed, SonorustError> {
     let guild_id = guild_id.ok_or_else(|| SonorustError::GuildIdIsNone)?;
     let member = guild_id.member(&ctx.http, user_id).await?;
     let guilddata = GuildData::from(guild_id).await?;
@@ -57,25 +59,16 @@ pub async fn autojoin(
         CreateEmbed::new()
             .title(lang_t!("autojoin.embed.title", lang))
             .description(description)
+            .footer(CreateEmbedFooter::new(lang_t!(
+                "autojoin.embed.footer",
+                lang
+            )))
     };
 
-    let create_component = || {
-        let button_register = CreateButton::new(lang_t!("customid.autojoin.register"))
-            .label(lang_t!("autojoin.label.register"))
-            .style(ButtonStyle::Primary);
-
-        let row = CreateActionRow::Buttons(vec![button_register]);
-        vec![row]
-    };
-
-    let component = match is_bot_owner || is_admin {
-        true => create_component(),
-        false => vec![],
-    };
-
-    Ok((embed, component))
+    Ok(embed)
 }
 
 pub fn create_command(lang: Lang) -> CreateCommand {
+    // TODO: 後でチャンネル選択を追加
     CreateCommand::new("autojoin").description(lang_t!("autojoin.command.description", lang))
 }

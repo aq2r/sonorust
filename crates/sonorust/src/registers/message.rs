@@ -1,7 +1,11 @@
-use std::{sync::OnceLock, time::Instant};
+use std::{
+    sync::{LazyLock, OnceLock},
+    time::Instant,
+};
 
 use either::Either;
 use langrustang::{format_t, lang_t};
+use regex::Regex;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
 
 use crate::{
@@ -51,7 +55,11 @@ async fn command_processing(
     let Some(command_name) = command_args.get(0) else {
         return Ok(());
     };
-    let command_rest = command_args.get(1..).unwrap_or_else(|| &[]);
+    let command_rest: Vec<_> = command_args
+        .get(1..)
+        .unwrap_or_else(|| &[])
+        .iter()
+        .collect();
 
     let debug_log = || {
         log::debug!(
@@ -261,16 +269,10 @@ async fn command_processing(
         "autojoin" => {
             debug_log();
 
-            let (embed, components) =
-                commands::autojoin(ctx, msg.guild_id, msg.author.id, lang).await?;
+            let embed =
+                commands::autojoin(ctx, msg.guild_id, msg.author.id, lang, None, None).await?;
 
-            eq_uilibrium::send_msg!(
-                msg.channel_id,
-                &ctx.http,
-                embed = embed,
-                components = components
-            )
-            .await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed,).await?;
         }
         "read_add" => {
             debug_log();

@@ -22,3 +22,4 @@ thiserror.workspace = true
 sqlx.workspace = true
 anyhow.workspace = true
 symphonia.workspace = true
+regex.workspace = true
