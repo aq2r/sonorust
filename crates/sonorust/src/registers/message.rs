@@ -287,6 +287,8 @@ async fn command_processing(
             msg.channel_id.say(&ctx.http, content).await?;
         }
 
+        "clear" => {}
+
         _ => (),
     }
 

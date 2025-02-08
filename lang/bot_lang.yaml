@@ -354,6 +354,13 @@ autojoin.too_many:
   en: There are too many registered channel to display.
 
 # read_add, read_remove
+read_add.command.name:
+  all: read_add
+
+read_add.command.description:
+  ja: 実行したチャンネルを読み上げる対象に追加します。
+  en: Executed channel will be added to the list of channels to reading.
+
 read_add.failed:
   ja: 登録できませんでした。
   en: Could not be registered.
@@ -365,6 +372,13 @@ read_add.registerd:
 read_add.already:
   ja: すでに読み上げる対象に登録しています。
   en: Already registered to be read aloud.
+
+read_remove.command.name:
+  all: read_remove
+
+read_remove.command.description:
+  ja: 実行したチャンネルを読み上げる対象から解除します。
+  en: Executed channel will be removed from the list of channels to be reading.
 
 read_remove.failed:
   ja: 登録を解除できませんでした。
@@ -385,6 +399,14 @@ read_add_remove.user_notconnect:
 read_add_remove.bot_notconnect:
   ja: ボイスチャンネルに接続していません。
   en: Not connected to a voice channel.
+
+# Clear
+clear.command.name:
+  all: clear
+
+clear.command.description:
+  ja: 現在の読み上げキューをクリアします。
+  en: Clears the current speech queue.
 
 #____ Bot Messages ____#
 msg.attachments:

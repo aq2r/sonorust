@@ -77,6 +77,21 @@ pub async fn help(ctx: &Context, lang: Lang, prefix: &str) -> CreateEmbed {
             lang_t!("wav.command.description", lang),
             IS_INLINE,
         ),
+        (
+            lang_t!("read_add.command.name"),
+            lang_t!("read_add.command.description", lang),
+            IS_INLINE,
+        ),
+        (
+            lang_t!("read_remove.command.name"),
+            lang_t!("read_remove.command.description", lang),
+            IS_INLINE,
+        ),
+        (
+            lang_t!("clear.command.name"),
+            lang_t!("clear.command.description", lang),
+            IS_INLINE,
+        ),
     ];
 
     let bot_user = ctx.cache.current_user();
