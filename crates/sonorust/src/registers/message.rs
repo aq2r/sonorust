@@ -1,8 +1,11 @@
-use std::{sync::OnceLock, time::Instant};
+use std::{collections::HashMap, sync::OnceLock, time::Instant};
 
 use either::Either;
+use engtokana::EngToKana;
 use langrustang::{format_t, lang_t};
+use regex::Regex;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
+use sonorust_db::GuildData;
 
 use crate::{
     commands,
@@ -311,5 +314,163 @@ async fn other_processing(
     ctx: &Context,
     msg: &Message,
 ) -> Result<(), SonorustError> {
-    todo!()
+    // セミコロンから始まっていた場合無視
+    if msg.content.starts_with(";") {
+        return Ok(());
+    }
+
+    // ギルド上でない場合無視
+    let Some(guild_id) = msg.guild_id else {
+        return Ok(());
+    };
+
+    // 読み上げるチャンネルか確認
+    let read_target_ch = handler
+        .read_channels
+        .with_read(|lock| lock.get(&guild_id).cloned());
+
+    let is_read_target = match read_target_ch {
+        Some(hashset) => hashset.contains(&msg.channel_id),
+        None => return Ok(()),
+    };
+
+    if !is_read_target {
+        return Ok(());
+    }
+
+    let guilddata = GuildData::from(guild_id).await?;
+
+    let lang = handler.setting_json.get_bot_lang();
+
+    // 読み上げ用に文字を置換する
+    let mut text_replace = TextReplace::new(&msg.content);
+
+    text_replace.remove_codeblock();
+    text_replace.remove_url();
+    text_replace.remove_discord_obj();
+
+    text_replace.replace_from_guilddict(&guilddata);
+
+    // 日本語の時のみ英語を日本語読みに変換
+    {
+        use crate::_langrustang_autogen::Lang::*;
+
+        match lang {
+            Ja => text_replace.eng_to_kana(),
+            _ => (),
+        }
+    }
+
+    text_replace.remove_emoji();
+
+    let replaced_text = text_replace.as_string();
+
+    // read_limit よりも長い場合はその長さに制限する
+    let read_limit = handler.setting_json.with_read(|lock| lock.read_limit);
+    let content = match replaced_text.char_indices().nth(read_limit as _) {
+        Some((idx, _)) => format_t!("msg.omitted", lang, &replaced_text[..idx]),
+        None => replaced_text,
+    };
+
+    // 設定で ON になっていて添付ファイルがあるなら添付ファイルがあることを知らせる
+    if !msg.attachments.is_empty() && guilddata.options.is_notice_attachment {
+        handler
+            .infer_client
+            .play_on_vc(
+                handler,
+                ctx,
+                msg.guild_id,
+                msg.channel_id,
+                msg.author.id,
+                lang_t!("msg.attachments", lang),
+            )
+            .await?;
+    }
+
+    handler
+        .infer_client
+        .play_on_vc(
+            handler,
+            ctx,
+            msg.guild_id,
+            msg.channel_id,
+            msg.author.id,
+            &content,
+        )
+        .await?;
+
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct TextReplace {
+    text: String,
+}
+
+impl TextReplace {
+    pub fn new<S>(text: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self { text: text.into() }
+    }
+
+    pub fn as_string(self) -> String {
+        self.text
+    }
+
+    pub fn remove_codeblock(&mut self) {
+        // ``` が含まれていた場合全体をコードブロックと読む
+        if self.text.contains("```") {
+            self.text = "コードブロック".to_string();
+            return;
+        }
+
+        let re = Regex::new(r"`.*?`").unwrap();
+        self.text = re.replace_all(&self.text, "コード").to_string()
+    }
+
+    pub fn remove_url(&mut self) {
+        let re = Regex::new(r"https?://[\w/:%#\$&\?\(\)~\.=\+\-]+").unwrap();
+        self.text = re.replace_all(&self.text, "URL").to_string()
+    }
+
+    /// チャンネルやメンション、カスタム絵文字などの置換
+    pub fn remove_discord_obj(&mut self) {
+        let re = Regex::new(r"<.*?>").unwrap();
+        self.text = re.replace_all(&self.text, "").to_string()
+    }
+
+    pub fn remove_emoji(&mut self) {
+        let re = Regex::new(r"[^\p{L}\p{N}\p{Pd}\p{Sm}\p{Sc}]").unwrap();
+        self.text = re.replace_all(&self.text, "").to_string()
+    }
+
+    /// 指定したサーバー辞書をもとに置換する
+    pub fn replace_from_guilddict(&mut self, guilddata: &GuildData) {
+        let map = &guilddata.dict;
+
+        self.replace_from_hashmap(map);
+    }
+
+    /// HashMap をもとに HashMap の Key を Value に置換する
+    pub fn replace_from_hashmap(&mut self, map: &HashMap<String, String>) {
+        let mut replace_texts = HashMap::new();
+
+        for (i, (before, after)) in map.iter().enumerate() {
+            let mark = format!("{{|{}|}}", i);
+
+            self.text = self.text.replace(before, &mark).to_string();
+            replace_texts.insert(mark, after);
+        }
+
+        for (before, after) in replace_texts {
+            self.text = self.text.replace(&before, after)
+        }
+    }
+
+    /// 英語をカタカナ読みに変換する
+    pub fn eng_to_kana(&mut self) {
+        self.text = EngToKana::convert_all(&self.text);
+    }
 }
