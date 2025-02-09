@@ -21,7 +21,7 @@ pub async fn voice_state_update(
     old: &Option<VoiceState>,
     new: &VoiceState,
 ) -> Result<(), SonorustError> {
-    let autojoin_future = auto_join(handler, &ctx, new.guild_id, new.user_id);
+    let mut autojoin_future = None;
     let mut auto_leave_future = None;
     let mut log_play_futures = FuturesUnordered::new();
 
@@ -43,6 +43,7 @@ pub async fn voice_state_update(
             }
             if let Some(channel_id) = new.channel_id {
                 log_play_futures.push(fn_log_play(channel_id, UserAction::Entrance));
+                autojoin_future = Some(auto_join(handler, &ctx, new.guild_id, new.user_id));
             }
 
             auto_leave_future = Some(auto_leave(&ctx, new.guild_id));
@@ -50,6 +51,7 @@ pub async fn voice_state_update(
     } else {
         if let Some(channel_id) = new.channel_id {
             log_play_futures.push(fn_log_play(channel_id, UserAction::Entrance));
+            autojoin_future = Some(auto_join(handler, &ctx, new.guild_id, new.user_id));
         }
     }
 
@@ -61,14 +63,21 @@ pub async fn voice_state_update(
         Ok::<(), SonorustError>(())
     };
 
-    let auto_leave_future = async {
+    let autojoin_future = async {
+        if let Some(future) = autojoin_future {
+            future.await?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let autoleave_future = async {
         if let Some(future) = auto_leave_future {
             future.await;
         }
         Ok::<(), SonorustError>(())
     };
 
-    let (r1, r2, r3) = tokio::join!(autojoin_future, log_play_futures, auto_leave_future);
+    let (r1, r2, r3) = tokio::join!(autojoin_future, log_play_futures, autoleave_future);
 
     r1?;
     r2?;
@@ -101,6 +110,19 @@ async fn auto_join(
     let in_user_channel = {
         let guild = guild_id.to_guild_cached(&ctx.cache).unwrap();
         let ch = guild.voice_states.get(&user_id).and_then(|v| v.channel_id);
+
+        // そのチャンネル id にいるユーザーリストを取得
+        let voice_states: &HashMap<UserId, VoiceState> = &guild.voice_states;
+        let in_vc_users = voice_states
+            .iter()
+            .filter(|(_, v)| v.channel_id == ch)
+            .map(|(k, _)| *k)
+            .collect::<Vec<_>>();
+
+        // ユーザーが1人になった時のみ
+        if in_vc_users.len() != 1 {
+            return Ok(());
+        }
 
         match ch {
             Some(user_vc) => user_vc,
