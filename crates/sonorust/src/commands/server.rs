@@ -5,7 +5,10 @@ use serenity::all::{
 };
 use sonorust_db::GuildData;
 
-use crate::{_langrustang_autogen::Lang, errors::SonorustError};
+use crate::{
+    _langrustang_autogen::Lang, crate_extensions::serenity::SerenityHttpExt as _,
+    errors::SonorustError,
+};
 
 pub async fn server(
     ctx: &Context,
@@ -18,15 +21,7 @@ pub async fn server(
     let guilddata = GuildData::from(guild_id).await?;
 
     let is_bot_owner = {
-        let app_owner_id = {
-            match ctx.http.get_current_application_info().await {
-                Ok(info) => match info.owner {
-                    Some(owner) => owner.id,
-                    None => UserId::new(1),
-                },
-                Err(_) => UserId::new(1),
-            }
-        };
+        let app_owner_id = ctx.http.get_bot_owner_id().await;
         app_owner_id == user_id
     };
 

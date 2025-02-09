@@ -11,11 +11,16 @@ use std::sync::RwLock;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use crate_extensions::rwlock::RwLockExt;
+use crate_extensions::sonorust_setting::SettingJsonExt;
 use either::Either;
 use engtokana::EngToKana;
+use errors::SonorustError;
 use infer_api::{Sbv2PythonClient, Sbv2RustClient, Sbv2RustDownloads, Sbv2RustError};
+use langrustang::lang_t;
 use serenity::all::GatewayError::DisallowedGatewayIntents;
-use serenity::all::{ChannelId, Context, GuildId, Interaction, Message, Ready, VoiceState};
+use serenity::all::{
+    ChannelId, Colour, Context, CreateEmbed, GuildId, Interaction, Message, Ready, VoiceState,
+};
 use serenity::{
     all::{EventHandler, GatewayIntents},
     async_trait, Client,
@@ -41,7 +46,23 @@ impl EventHandler for Handler {
 
     async fn message(&self, ctx: Context, msg: Message) {
         if let Err(err) = registers::message(self, &ctx, &msg).await {
-            log::error!("Error on message: {err}");
+            match err {
+                SonorustError::GuildIdIsNone => {
+                    let lang = self.setting_json.get_bot_lang();
+
+                    let embed = CreateEmbed::new()
+                        .title(lang_t!("msg.only_use_guild_1", lang))
+                        .description(lang_t!("msg.only_use_guild_2", lang))
+                        .colour(Colour::from_rgb(255, 0, 0));
+
+                    if let Err(err) =
+                        eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await
+                    {
+                        log::error!("Cannot send message: {}", err);
+                    }
+                }
+                _ => log::error!("Error on message: {err}"),
+            }
         };
     }
 
@@ -52,7 +73,9 @@ impl EventHandler for Handler {
             }
 
             Interaction::Component(inter) => {
-                registers::component(self, &ctx, &inter).await;
+                if let Err(err) = registers::component(self, &ctx, &inter).await {
+                    
+                }
             }
 
             _ => (),
