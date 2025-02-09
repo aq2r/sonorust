@@ -155,31 +155,43 @@ async fn auto_join(
         return Ok(());
     }
 
-    // メッセージや音声を同時実行
+    // メッセージ送信や音声再生を同時実行
     let mut tasks = FuturesUnordered::new();
 
     for i in join_set.iter() {
         tasks.push(i.say(&ctx.http, lang_t!("join.connected", lang)));
     }
 
-    while let Some(item) = tasks.next().await {
-        item?;
-    }
+    let send_connected_future = async {
+        while let Some(item) = tasks.next().await {
+            item?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+    let mut play_connected = None;
 
     // 接続しました 音声
     if let Some(ch) = join_set.iter().nth(0) {
-        handler
-            .infer_client
-            .play_on_vc(
-                handler,
-                ctx,
-                Some(guild_id),
-                *ch,
-                user_id,
-                lang_t!("join.connected", lang),
-            )
-            .await?;
+        play_connected = Some(handler.infer_client.play_on_vc(
+            handler,
+            ctx,
+            Some(guild_id),
+            *ch,
+            user_id,
+            lang_t!("join.connected", lang),
+        ));
     }
+
+    let play_connected_future = async {
+        if let Some(future) = play_connected {
+            future.await?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let (r1, r2) = tokio::join!(send_connected_future, play_connected_future);
+    r1?;
+    r2?;
 
     log::debug!(
         "Auto joined: {{ GuildID: {}, ChannelID: {} }}",
