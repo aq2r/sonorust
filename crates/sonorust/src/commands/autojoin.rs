@@ -80,6 +80,7 @@ async fn autojoin_setting(
     };
 
     let is_admin = {
+        #[allow(deprecated)]
         match member.permissions(&ctx.cache) {
             Ok(permissons) => permissons.administrator(),
             Err(_) => false,

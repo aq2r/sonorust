@@ -29,6 +29,7 @@ pub async fn dict_add(
     };
 
     let is_admin = {
+        #[allow(deprecated)]
         match inter_member.permissions(&ctx.cache) {
             Ok(permissons) => permissons.administrator(),
             Err(_) => false,
