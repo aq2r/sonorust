@@ -46,6 +46,10 @@ pub async fn component(
             components::button::move_page(handler, ctx, interaction, custom_id).await?
         }
 
+        lang_t!("customid.change_server_settings") => {
+            components::select_menu::server(handler, ctx, interaction).await?
+        }
+
         lang_t!("customid.dict.add") => {
             components::button::dict_add(handler, ctx, interaction).await?
         }
