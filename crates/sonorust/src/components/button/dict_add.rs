@@ -1,5 +1,5 @@
 use langrustang::{format_t, lang_t};
-use serenity::all::{ComponentInteraction, Context, CreateQuickModal, ModalInteraction, UserId};
+use serenity::all::{ComponentInteraction, Context, CreateQuickModal, ModalInteraction};
 use sonorust_db::{GuildData, GuildDataMut};
 
 use crate::{

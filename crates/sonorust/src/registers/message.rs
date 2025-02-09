@@ -1,11 +1,7 @@
-use std::{
-    sync::{LazyLock, OnceLock},
-    time::Instant,
-};
+use std::{sync::OnceLock, time::Instant};
 
 use either::Either;
 use langrustang::{format_t, lang_t};
-use regex::Regex;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
 
 use crate::{
@@ -269,10 +265,22 @@ async fn command_processing(
         "autojoin" => {
             debug_log();
 
-            let embed =
+            let (embed, text) =
                 commands::autojoin(ctx, msg.guild_id, msg.author.id, lang, None, None).await?;
 
-            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed,).await?;
+            let mut create_message = CreateMessage::new();
+
+            if let Some(embed) = embed {
+                create_message = create_message.add_embed(embed);
+            }
+
+            if let Some(text) = text {
+                create_message = create_message.content(text);
+            }
+
+            msg.channel_id
+                .send_message(&ctx.http, create_message)
+                .await?;
         }
         "read_add" => {
             debug_log();

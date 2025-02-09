@@ -354,6 +354,36 @@ autojoin.too_many:
   ja: 登録されているチャンネルが多すぎたため表示できませんでした。
   en: There are too many registered channel to display.
 
+autojoin.inserted:
+  ja: 自動参加するボイスチャンネルとテキストチャンネルのペアを登録しました。
+  en: Registered a pair of voice and text channels that will automatically join.
+
+autojoin.removed:
+  ja: 自動参加するボイスチャンネルとテキストチャンネルのペアを解除しました。
+  en: Unregistered a pair of voice and text channels that will automatically join.
+
+autojoin.not_voicech:
+  ja: "`voice_channel` にはボイスチャンネルを指定してください。"
+  en: "Specify the voice channel for `voice_channel`."
+
+autojoin.not_textch:
+  ja: "`text_channel` にはテキストチャンネルを指定してください。"
+  en: "Specify the text channel for `text_channel`."
+
+autojoin.option.voice_ch:
+  all: voice_channel
+
+autojoin.option.voice_ch.description:
+  ja: 誰かが参加したときに自動参加するボイスチャンネルを指定します。
+  en: Specify the voice channel to auto join when someone joins.
+
+autojoin.option.text_ch:
+  all: text_channel
+
+autojoin.option.text_ch.description:
+  ja: 自動参加した後読み上げるテキストチャンネルを指定します。
+  en: Specify the text channel to be read out after auto join.
+
 # read_add, read_remove
 read_add.command.name:
   all: read_add

@@ -69,12 +69,48 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match &interaction {
             Interaction::Command(inter) => {
-                registers::slash_command(self, &ctx, &inter).await;
+                if let Err(err) = registers::slash_command(self, &ctx, &inter).await {
+                    match err {
+                        SonorustError::GuildIdIsNone => {
+                            let lang = self.setting_json.get_bot_lang();
+
+                            let embed = CreateEmbed::new()
+                                .title(lang_t!("msg.only_use_guild_1", lang))
+                                .description(lang_t!("msg.only_use_guild_2", lang))
+                                .colour(Colour::from_rgb(255, 0, 0));
+
+                            if let Err(err) =
+                                eq_uilibrium::create_response_msg!(inter, &ctx.http, embed = embed)
+                                    .await
+                            {
+                                log::error!("Cannot send message: {}", err);
+                            }
+                        }
+                        _ => log::error!("Error on slash_command: {err}"),
+                    }
+                };
             }
 
             Interaction::Component(inter) => {
                 if let Err(err) = registers::component(self, &ctx, &inter).await {
-                    log::error!("Error on component: {err}");
+                    match err {
+                        SonorustError::GuildIdIsNone => {
+                            let lang = self.setting_json.get_bot_lang();
+
+                            let embed = CreateEmbed::new()
+                                .title(lang_t!("msg.only_use_guild_1", lang))
+                                .description(lang_t!("msg.only_use_guild_2", lang))
+                                .colour(Colour::from_rgb(255, 0, 0));
+
+                            if let Err(err) =
+                                eq_uilibrium::create_response_msg!(inter, &ctx.http, embed = embed)
+                                    .await
+                            {
+                                log::error!("Cannot send message: {}", err);
+                            }
+                        }
+                        _ => log::error!("Error on component: {err}"),
+                    }
                 }
             }
 
