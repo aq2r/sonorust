@@ -173,11 +173,14 @@ impl InferApiExt for TokioRwLock<Either<Sbv2PythonClient, Sbv2RustClient>> {
                     return Ok(());
                 };
 
-                // すべてを再生し終えたらreturnして終了する
-                match read_ch_queue.pop_back() {
-                    Some(data) => data,
+                let mut voice_data = vec![];
+
+                match read_ch_queue.back_mut() {
+                    Some(data) => std::mem::swap(&mut voice_data, data),
                     None => return Ok(()),
                 }
+
+                voice_data
             };
 
             // 再生時間を求める
@@ -206,6 +209,17 @@ impl InferApiExt for TokioRwLock<Either<Sbv2PythonClient, Sbv2RustClient>> {
             // その音声の再生時間だけスリープする
             let duration = Duration::from_secs_f64(voice_playtime);
             tokio::time::sleep(duration).await;
+
+            {
+                let mut channel_queues = handler.channel_queues.write().unwrap();
+                let Some(read_ch_queue) = channel_queues.get_mut(&guild_id) else {
+                    log::error!(lang_t!("log.fail_ch_queue"));
+                    return Ok(());
+                };
+
+                // すべてを再生し終えたらreturnして終了する
+                read_ch_queue.pop_back()
+            };
         }
     }
 }

@@ -119,7 +119,9 @@ impl EventHandler for Handler {
     }
 
     async fn voice_state_update(&self, ctx: Context, old: Option<VoiceState>, new: VoiceState) {
-        registers::voice_state_update(self, &ctx, &old, &new).await;
+        if let Err(err) = registers::voice_state_update(self, &ctx, &old, &new).await {
+            log::error!("Error on voice_state_update: {}", err)
+        }
     }
 }
 
