@@ -439,6 +439,22 @@ clear.command.description:
   ja: 現在の読み上げキューをクリアします。
   en: Clears the current speech queue.
 
+clear.cleard:
+  ja: 現在のキューをクリアしました。
+  en: The current queue has been cleared.
+
+clear.failed:
+  ja: キューの削除に失敗しました。
+  en: Failed to delete queue.
+
+clear.user_notconnect:
+  ja: ボイスチャンネルに接続してから使用してください。
+  en: Connect to a voice channel before using.
+
+clear.bot_notconnect:
+  ja: ボイスチャンネルに接続していません。
+  en: Not connected to a voice channel.
+
 #____ Bot Messages ____#
 msg.attachments:
   ja: 添付ファイル

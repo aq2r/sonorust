@@ -314,7 +314,13 @@ pub async fn slash_command(
             )?;
             eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
         }
-        "clear" => {}
+        "clear" => {
+            debug_log();
+
+            let content =
+                commands::clear(handler, ctx, interaction.guild_id, interaction.user.id).await?;
+            eq_uilibrium::create_response_msg!(interaction, &ctx.http, content = content).await?;
+        }
 
         _ => {
             log::error!(
@@ -331,6 +337,7 @@ pub async fn slash_command(
 pub fn registers(lang: Lang) -> Vec<CreateCommand> {
     vec![
         commands::autojoin::create_command(lang),
+        commands::clear::create_command(lang),
         commands::dict::create_command(lang),
         commands::help::create_command(lang),
         commands::join::create_command(lang),

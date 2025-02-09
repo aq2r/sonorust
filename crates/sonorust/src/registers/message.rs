@@ -300,7 +300,12 @@ async fn command_processing(
             msg.channel_id.say(&ctx.http, content).await?;
         }
 
-        "clear" => {}
+        "clear" => {
+            debug_log();
+
+            let content = commands::clear(handler, ctx, msg.guild_id, msg.author.id).await?;
+            msg.channel_id.say(&ctx.http, content).await?;
+        }
 
         _ => (),
     }

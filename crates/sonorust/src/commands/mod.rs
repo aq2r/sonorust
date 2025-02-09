@@ -1,4 +1,5 @@
 pub mod autojoin;
+pub mod clear;
 pub mod dict;
 pub mod help;
 pub mod join;
@@ -16,6 +17,7 @@ pub mod style;
 pub mod wav;
 
 pub use autojoin::autojoin;
+pub use clear::clear;
 pub use dict::dict;
 pub use help::help;
 pub use join::join;

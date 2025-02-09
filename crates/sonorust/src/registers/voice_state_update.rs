@@ -21,7 +21,9 @@ pub async fn voice_state_update(
     old: &Option<VoiceState>,
     new: &VoiceState,
 ) -> Result<(), SonorustError> {
-    auto_join(handler, &ctx, new.guild_id, new.user_id).await?;
+    let autojoin_future = auto_join(handler, &ctx, new.guild_id, new.user_id);
+    let mut auto_leave_future = None;
+    let mut log_play_futures = FuturesUnordered::new();
 
     let fn_log_play = |channel_id, user_action| {
         entrance_exit_log_play(
@@ -37,19 +39,40 @@ pub async fn voice_state_update(
     if let Some(old) = old {
         if new.channel_id != old.channel_id {
             if let Some(channel_id) = old.channel_id {
-                fn_log_play(channel_id, UserAction::Exit).await?;
+                log_play_futures.push(fn_log_play(channel_id, UserAction::Exit));
             }
             if let Some(channel_id) = new.channel_id {
-                fn_log_play(channel_id, UserAction::Entrance).await?;
+                log_play_futures.push(fn_log_play(channel_id, UserAction::Entrance));
             }
 
-            auto_leave(&ctx, new.guild_id).await;
+            auto_leave_future = Some(auto_leave(&ctx, new.guild_id));
         }
     } else {
         if let Some(channel_id) = new.channel_id {
-            fn_log_play(channel_id, UserAction::Entrance).await?;
+            log_play_futures.push(fn_log_play(channel_id, UserAction::Entrance));
         }
     }
+
+    // それぞれを同時実行
+    let log_play_futures = async {
+        while let Some(result) = log_play_futures.next().await {
+            result?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let auto_leave_future = async {
+        if let Some(future) = auto_leave_future {
+            future.await;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let (r1, r2, r3) = tokio::join!(autojoin_future, log_play_futures, auto_leave_future);
+
+    r1?;
+    r2?;
+    r3?;
 
     Ok(())
 }
