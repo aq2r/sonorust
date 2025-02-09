@@ -41,8 +41,9 @@ pub async fn clear(
 
     let manager = songbird::get(ctx).await.unwrap();
     if let Some(handler_lock) = manager.get(guild_id) {
-        let handler = handler_lock.lock().await;
+        let mut handler = handler_lock.lock().await;
 
+        handler.stop();
         let queue = handler.queue();
         let _ = queue.skip();
     } else {
