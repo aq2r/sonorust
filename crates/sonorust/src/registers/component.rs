@@ -17,6 +17,16 @@ pub async fn component(
     );
 
     match custom_id.as_str() {
+        lang_t!("customid.select.model") => {
+            components::select_menu::model(handler, ctx, interaction).await?
+        }
+        lang_t!("customid.select.speaker") => {
+            components::select_menu::speaker(handler, ctx, interaction).await?
+        }
+        lang_t!("customid.select.style") => {
+            components::select_menu::style(handler, ctx, interaction).await?
+        }
+
         lang_t!("customid.page.model.forward") => {
             components::button::move_page(handler, ctx, interaction, custom_id).await?
         }
