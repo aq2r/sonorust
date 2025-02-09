@@ -74,7 +74,7 @@ impl EventHandler for Handler {
 
             Interaction::Component(inter) => {
                 if let Err(err) = registers::component(self, &ctx, &inter).await {
-                    
+                    log::error!("Error on component: {err}");
                 }
             }
 

@@ -17,6 +17,25 @@ pub async fn component(
     );
 
     match custom_id.as_str() {
+        lang_t!("customid.page.model.forward") => {
+            components::button::move_page(handler, ctx, interaction, custom_id).await?
+        }
+        lang_t!("customid.page.model.back") => {
+            components::button::move_page(handler, ctx, interaction, custom_id).await?
+        }
+        lang_t!("customid.page.speaker.forward") => {
+            components::button::move_page(handler, ctx, interaction, custom_id).await?
+        }
+        lang_t!("customid.page.speaker.back") => {
+            components::button::move_page(handler, ctx, interaction, custom_id).await?
+        }
+        lang_t!("customid.page.style.forward") => {
+            components::button::move_page(handler, ctx, interaction, custom_id).await?
+        }
+        lang_t!("customid.page.style.back") => {
+            components::button::move_page(handler, ctx, interaction, custom_id).await?
+        }
+
         lang_t!("customid.dict.add") => {
             components::button::dict_add(handler, ctx, interaction).await?
         }
