@@ -181,6 +181,7 @@ impl GuildDatabase {
 
         // サーバー辞書更新
         sqlx::query("DELETE FROM guild_dict WHERE guild_table_id = ?1")
+            .bind(&guild_table_id_string)
             .execute(&mut *tx)
             .await?;
 
@@ -245,6 +246,7 @@ impl GuildDatabase {
 
         // autojoin 更新
         sqlx::query("DELETE FROM guild_auto_join WHERE guild_table_id = ?1")
+            .bind(&guild_table_id_string)
             .execute(&mut *tx)
             .await?;
 
@@ -524,6 +526,25 @@ mod tests_guilddata_mut {
 
             let guild_data = GuildData::from(guild_id).await?;
             dbg!(guild_data.options.is_dic_onlyadmin);
+        }
+
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_update_dict() -> anyhow::Result<()> {
+        create_dir_all("appdata").await?;
+        init_database("appdata/database.db").await?;
+
+        let guild_id = GuildId::from(123);
+        {
+            let mut guilddata_mut = GuildDataMut::from(guild_id).await?;
+            dbg!(guilddata_mut.options.is_dic_onlyadmin);
+
+            guilddata_mut.dict = HashMap::from([]);
+
+            guilddata_mut.update().await?;
         }
 
         Ok(())
