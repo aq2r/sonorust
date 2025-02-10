@@ -1,32 +1,40 @@
 use langrustang::{format_t, lang_t};
 use serenity::all::{ComponentInteraction, Context, CreateQuickModal, ModalInteraction};
-use setting_inputter::SettingsJson;
 use sonorust_db::{GuildData, GuildDataMut};
 
 use crate::{
-    crate_extensions::SettingsJsonExtension,
-    errors::{NoneToSonorustError, SonorustError},
-    registers::APP_OWNER_ID,
+    crate_extensions::{serenity::SerenityHttpExt as _, sonorust_setting::SettingJsonExt as _},
+    errors::SonorustError,
+    Handler,
+    _langrustang_autogen::Lang,
 };
 
 pub async fn dict_remove(
+    handler: &Handler,
     ctx: &Context,
     interaction: &ComponentInteraction,
 ) -> Result<(), SonorustError> {
-    let lang = SettingsJson::get_bot_lang();
+    let lang = handler.setting_json.get_bot_lang();
 
-    let guild_id = interaction.guild_id.ok_or_sonorust_err()?;
+    let guild_id = interaction
+        .guild_id
+        .ok_or_else(|| SonorustError::GuildIdIsNone)?;
     let guild_data = GuildData::from(guild_id).await?;
-
-    let bot_owner_id = {
-        let lock = APP_OWNER_ID.read().unwrap();
-        *lock
-    };
 
     let inter_member = guild_id.member(&ctx.http, interaction.user.id).await?;
 
-    let is_admin = inter_member.permissions(&ctx.cache)?.administrator();
-    let is_bot_owner = { bot_owner_id == Some(interaction.user.id) };
+    let is_bot_owner = {
+        let app_owner_id = ctx.http.get_bot_owner_id().await;
+        app_owner_id == interaction.user.id
+    };
+
+    let is_admin = {
+        #[allow(deprecated)]
+        match inter_member.permissions(&ctx.cache) {
+            Ok(permissons) => permissons.administrator(),
+            Err(_) => false,
+        }
+    };
 
     // サーバー辞書の編集が管理者に限定されていた場合
     // もしサーバーの管理者でないなら返す (BOT の所有者の場合許可)
@@ -37,7 +45,7 @@ pub async fn dict_remove(
             interaction,
             &ctx.http,
             content = lang_t!("msg.only_admin", lang),
-            ephemeral = true,
+            ephemeral = true
         )
         .await?;
 
@@ -45,20 +53,18 @@ pub async fn dict_remove(
     }
 
     // modal の送信と処理
-    let modal = create_quickmodal();
+    let modal = create_quickmodal(lang);
     let Ok(Some(response)) = interaction.quick_modal(ctx, modal).await else {
         return Ok(());
     };
 
     let inputs = response.inputs;
-    on_submit(ctx, &response.interaction, inputs).await?;
+    on_submit(ctx, &response.interaction, inputs, lang).await?;
 
     Ok(())
 }
 
-pub fn create_quickmodal() -> CreateQuickModal {
-    let lang = SettingsJson::get_bot_lang();
-
+fn create_quickmodal(lang: Lang) -> CreateQuickModal {
     CreateQuickModal::new(lang_t!("dict.modal.remove.title", lang))
         .timeout(std::time::Duration::from_secs(600))
         .short_field(lang_t!("dict.modal.remove.field", lang))
@@ -68,23 +74,24 @@ async fn on_submit(
     ctx: &Context,
     interaction: &ModalInteraction,
     inputs: Vec<String>,
+    lang: Lang,
 ) -> Result<(), SonorustError> {
     // 入力内容の取得
     let key = &inputs[0];
 
-    let guild_id = interaction.guild_id.ok_or_sonorust_err()?;
+    let guild_id = interaction
+        .guild_id
+        .ok_or_else(|| SonorustError::GuildIdIsNone)?;
 
     let removed = {
-        let mut guild_data_mut = GuildDataMut::from(guild_id).await?;
-        let removed = guild_data_mut.dict.remove(key);
+        let mut guilddata_mut = GuildDataMut::from(guild_id).await?;
+        let removed = guilddata_mut.dict.remove(key);
 
         if removed.is_some() {
-            guild_data_mut.update().await?;
+            guilddata_mut.update().await?;
         }
         removed
     };
-
-    let lang = SettingsJson::get_bot_lang();
 
     // 返答するメッセージを作成\
     match removed {

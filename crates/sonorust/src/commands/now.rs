@@ -1,33 +1,79 @@
+use either::Either;
 use langrustang::{format_t, lang_t};
-use sbv2_api::Sbv2Client;
 use serenity::all::{CreateCommand, CreateEmbed, User};
-use setting_inputter::SettingsJson;
 use sonorust_db::UserData;
 
 use crate::{
-    crate_extensions::{sbv2_api::Sbv2ClientExtension, SettingsJsonExtension},
-    errors::SonorustError,
+    _langrustang_autogen::Lang, crate_extensions::rwlock::RwLockExt, errors::SonorustError, Handler,
 };
 
-pub async fn now(user: &User) -> Result<CreateEmbed, SonorustError> {
-    let user_data = UserData::from(user.id).await?;
-    let lang = SettingsJson::get_bot_lang();
+struct ModelInfo {
+    model_name: String,
+    speaker_name: String,
+    style_name: String,
+    length: f64,
+}
 
-    let valid_model = Sbv2Client::get_valid_model_from_userdata(&user_data);
+pub async fn now(handler: &Handler, user: &User, lang: Lang) -> Result<CreateEmbed, SonorustError> {
+    let userdata = UserData::from(user.id).await?;
+    let default_model = handler
+        .setting_json
+        .with_read(|lock| lock.default_model.clone());
 
-    // embed の内容設定
-    let model_name = &valid_model.model_name;
-    let speaker_name = &valid_model.speaker_name;
-    let style_name = &valid_model.style_name;
-    let length = user_data.length;
+    let model_info = {
+        let client = handler.infer_client.read().await;
+
+        match client.as_ref() {
+            Either::Left(python_client) => {
+                let valid_model = python_client
+                    .get_valid_model(
+                        &userdata.model_name,
+                        &userdata.speaker_name,
+                        &userdata.style_name,
+                        &default_model,
+                    )
+                    .await;
+
+                ModelInfo {
+                    model_name: valid_model.model_name,
+                    speaker_name: valid_model.speaker_name,
+                    style_name: valid_model.style_name,
+                    length: userdata.length,
+                }
+            }
+
+            Either::Right(rust_client) => {
+                let valid_model = rust_client.get_valid_model(&userdata.model_name, &default_model);
+
+                ModelInfo {
+                    model_name: valid_model.name.clone(),
+                    speaker_name: "default".to_string(),
+                    style_name: "default".to_string(),
+                    length: userdata.length,
+                }
+            }
+        }
+    };
 
     let fields = [
-        (lang_t!("now.embed.model", lang), model_name, false),
-        (lang_t!("now.embed.speaker", lang), speaker_name, false),
-        (lang_t!("now.embed.style", lang), style_name, false),
+        (
+            lang_t!("now.embed.model", lang),
+            model_info.model_name,
+            false,
+        ),
+        (
+            lang_t!("now.embed.speaker", lang),
+            model_info.speaker_name,
+            false,
+        ),
+        (
+            lang_t!("now.embed.style", lang),
+            model_info.style_name,
+            false,
+        ),
         (
             lang_t!("now.embed.speech_rate", lang),
-            &length.to_string(),
+            model_info.length.to_string(),
             false,
         ),
     ];
@@ -43,8 +89,6 @@ pub async fn now(user: &User) -> Result<CreateEmbed, SonorustError> {
         .fields(fields))
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("now").description(lang_t!("now.command.description", lang))
 }

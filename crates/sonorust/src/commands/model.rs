@@ -1,139 +1,93 @@
-use std::ops::Deref;
-
+use either::Either;
+use infer_api::{Sbv2PythonModelMap, Sbv2RustModel};
 use langrustang::lang_t;
-use sbv2_api::{Sbv2ModelInfo, SBV2_MODELINFO};
 use serenity::all::{
     ButtonStyle, CreateActionRow, CreateButton, CreateCommand, CreateEmbed, CreateSelectMenu,
     CreateSelectMenuKind, CreateSelectMenuOption,
 };
-use setting_inputter::{settings_json::InferUse, SettingsJson};
 
-use crate::crate_extensions::{sbv2_api_rust::TTS_MODEL_HOLDER, SettingsJsonExtension};
+use crate::{Handler, _langrustang_autogen::Lang};
+pub async fn model(handler: &Handler, lang: Lang) -> (CreateEmbed, Vec<CreateActionRow>) {
+    let (model_names, is_model_26_more) = {
+        let client = handler.infer_client.read().await;
+        match client.as_ref() {
+            Either::Left(python_client) => get_python_modelnames(python_client.model_info()),
+            Either::Right(rust_client) => get_rust_model_names(rust_client.get_modelinfo()),
+        }
+    };
 
-pub async fn model() -> (CreateEmbed, Vec<CreateActionRow>) {
-    let infer_use = SettingsJson::get_sbv2_inferuse();
+    let embed = {
+        let content = model_names
+            .iter()
+            .enumerate()
+            .map(|(idx, name)| format!("{}: {name}", idx + 1,))
+            .collect::<Vec<_>>()
+            .join("\n");
 
-    match infer_use {
-        InferUse::Python => sbv2_model().await,
-        InferUse::Rust => rust_model().await,
-    }
-}
+        CreateEmbed::new()
+            .title(lang_t!("model.embed.title", lang))
+            .description(content)
+    };
 
-async fn sbv2_model() -> (CreateEmbed, Vec<CreateActionRow>) {
-    // API のモデルデータを取得
-    let lock = SBV2_MODELINFO.read().unwrap();
-    let sbv2_modelinfo = lock.deref();
+    let select_menu = {
+        let mut selectoption_vec = vec![];
 
-    // embed とプルダウンリスト作成
-    let embed = sbv2_create_embed(sbv2_modelinfo);
-    let select_menu = sbv2_create_select_menu(sbv2_modelinfo);
+        for i in model_names.iter() {
+            selectoption_vec.push(CreateSelectMenuOption::new(i, i));
+        }
+
+        CreateSelectMenu::new(
+            lang_t!("customid.select.model"),
+            CreateSelectMenuKind::String {
+                options: selectoption_vec,
+            },
+        )
+    };
 
     // コンポーネントの行を作成
     let row0 = CreateActionRow::SelectMenu(select_menu);
     let mut components_vec = vec![row0];
 
     // モデルの数が 26 以上ならページ移動ボタンを追加
-    if sbv2_modelinfo.id_to_model.len() >= 26 {
+    if is_model_26_more {
         components_vec.push(create_button_row());
     }
 
     (embed, components_vec)
 }
 
-fn sbv2_create_embed(apimodelinfo: &Sbv2ModelInfo) -> CreateEmbed {
-    // model 25個分の表示を作成 25個以下だったらそこで終了
-    let mut content = String::new();
+fn get_python_modelnames(model_info: &Sbv2PythonModelMap) -> (Vec<String>, bool) {
+    let mut result = vec![];
+    let mut is_model_26_more = true;
+
     for i in 0..=24 {
-        match apimodelinfo.id_to_model.get(&i) {
-            Some(model) => {
-                let text = format!("{}: {}\n", i + 1, model.model_name);
-                content += &text
+        match model_info.id_to_model.get(&i) {
+            Some(model) => result.push(model.model_name.clone()),
+            None => {
+                is_model_26_more = false;
+                break;
             }
-            None => break,
         }
     }
 
-    CreateEmbed::new()
-        .title("使用できるモデル一覧")
-        .description(content)
+    (result, is_model_26_more)
 }
 
-fn sbv2_create_select_menu(apimodelinfo: &Sbv2ModelInfo) -> CreateSelectMenu {
-    // model 25個までのプルダウンリストを作成
-    let mut selectoption_vec = vec![];
+fn get_rust_model_names(model_info: &Vec<Sbv2RustModel>) -> (Vec<String>, bool) {
+    let mut result = vec![];
+    let mut is_model_26_more = true;
+
     for i in 0..=24 {
-        match apimodelinfo.id_to_model.get(&i) {
-            Some(model) => selectoption_vec.push(CreateSelectMenuOption::new(
-                model.model_name.as_str(),
-                model.model_name.as_str(),
-            )),
-            None => break,
-        }
-    }
-
-    CreateSelectMenu::new(
-        lang_t!("customid.select.model"),
-        CreateSelectMenuKind::String {
-            options: selectoption_vec,
-        },
-    )
-}
-
-async fn rust_model() -> (CreateEmbed, Vec<CreateActionRow>) {
-    let lock = TTS_MODEL_HOLDER.lock().await;
-    let model_holder = lock.as_ref().unwrap();
-
-    let model_idents = model_holder.model_idents();
-
-    // embed 作成
-    let mut content = String::new();
-    for i in 0..24 {
-        match model_idents.get(i) {
-            Some(model_name) => {
-                let text = format!("{}: {}\n", i + 1, model_name);
-                content += &text
+        match model_info.get(i) {
+            Some(model) => result.push(model.name.clone()),
+            None => {
+                is_model_26_more = false;
+                break;
             }
-            None => break,
         }
     }
 
-    let embed = CreateEmbed::new()
-        .title("使用できるモデル一覧")
-        .description(content);
-
-    // component 作成
-    let mut selectoption_vec = vec![];
-    for i in 0..24 {
-        match model_idents.get(i) {
-            Some(model_name) => {
-                selectoption_vec.push(CreateSelectMenuOption::new(
-                    model_name.as_str(),
-                    model_name.as_str(),
-                ));
-            }
-
-            None => break,
-        }
-    }
-
-    let select_menu = CreateSelectMenu::new(
-        lang_t!("customid.select.model"),
-        CreateSelectMenuKind::String {
-            options: selectoption_vec,
-        },
-    );
-
-    let row0 = CreateActionRow::SelectMenu(select_menu);
-    let components_vec = vec![row0];
-
-    // Rust版 sbv2 では現在26個以上のモデルは非対応、対応するかは未定
-
-    // モデルの数が 26 以上ならページ移動ボタンを追加
-    // if model_idents.len() >= 26 {
-    //     components_vec.push(create_button_row());
-    // }
-
-    (embed, components_vec)
+    (result, is_model_26_more)
 }
 
 fn create_button_row() -> CreateActionRow {
@@ -155,8 +109,6 @@ fn create_button_row() -> CreateActionRow {
     CreateActionRow::Buttons(vec![page_back, page_number, page_forward])
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("model").description(lang_t!("model.command.description", lang))
 }

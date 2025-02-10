@@ -1,7 +1,4 @@
-mod infer;
-pub mod sbv2_api;
-pub mod sbv2_api_rust;
-pub mod setting_inputter;
-
-pub use infer::play_on_voice_channel;
-pub use setting_inputter::SettingsJsonExtension;
+pub mod infer_api;
+pub mod rwlock;
+pub mod serenity;
+pub mod sonorust_setting;

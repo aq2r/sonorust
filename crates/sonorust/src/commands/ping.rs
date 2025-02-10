@@ -2,13 +2,10 @@ use std::time::Duration;
 
 use langrustang::{format_t, lang_t};
 use serenity::all::{CreateCommand, CreateEmbed};
-use setting_inputter::SettingsJson;
 
-use crate::crate_extensions::SettingsJsonExtension;
+use crate::_langrustang_autogen::Lang;
 
-pub fn measuring_embed() -> CreateEmbed {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn measuring_embed(lang: Lang) -> CreateEmbed {
     CreateEmbed::new()
         .title(lang_t!("ping.embed.title"))
         .description(lang_t!("ping.embed.measuring", lang))

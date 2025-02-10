@@ -6,54 +6,110 @@ mod crate_extensions;
 mod errors;
 mod registers;
 
-use std::path::PathBuf;
-use std::time::Duration;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::RwLock;
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use crate_extensions::sbv2_api_rust::{TtsModelHolderExtension, TTS_MODEL_HOLDER};
-use crate_extensions::SettingsJsonExtension;
+use crate_extensions::rwlock::RwLockExt;
+use crate_extensions::sonorust_setting::SettingJsonExt;
+use either::Either;
 use engtokana::EngToKana;
-use sbv2_api::Sbv2Client;
-use sbv2_core::{TtsModelHolder, TtsModelHolderFromPath};
+use errors::SonorustError;
+use infer_api::{Sbv2PythonClient, Sbv2RustClient, Sbv2RustDownloads, Sbv2RustError};
+use langrustang::lang_t;
 use serenity::all::GatewayError::DisallowedGatewayIntents;
+use serenity::all::{
+    ChannelId, Colour, Context, CreateEmbed, GuildId, Interaction, Message, Ready, VoiceState,
+};
 use serenity::{
-    all::{Context, EventHandler, GatewayIntents, Interaction, Message, Ready, VoiceState},
+    all::{EventHandler, GatewayIntents},
     async_trait, Client,
 };
-use setting_inputter::settings_json::{InferUse, SettingsJson, SETTINGS_JSON};
-use songbird::SerenityInit as _;
-use tokio::fs::create_dir_all;
-use tokio::runtime::Runtime;
+use songbird::SerenityInit;
+use sonorust_setting::{InferUse, SettingJson};
+use tokio::sync::RwLock as TokioRwLock;
 
-pub struct Handler;
+type ArcRwLock<T> = Arc<RwLock<T>>;
+
+struct Handler {
+    pub setting_json: ArcRwLock<SettingJson>,
+    pub infer_client: Arc<TokioRwLock<Either<Sbv2PythonClient, Sbv2RustClient>>>,
+    pub read_channels: ArcRwLock<HashMap<GuildId, HashSet<ChannelId>>>,
+    pub channel_queues: ArcRwLock<HashMap<GuildId, VecDeque<Vec<u8>>>>,
+}
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        registers::ready(&ctx, &ready).await;
+        registers::ready(self, &ctx, &ready).await;
     }
 
     async fn message(&self, ctx: Context, msg: Message) {
-        if let Err(err) = registers::message(&ctx, &msg).await {
-            if let Err(err) = err.send_err_msg(&ctx, msg.channel_id).await {
-                log::error!("Can't respond message: {}", err);
+        if let Err(err) = registers::message(self, &ctx, &msg).await {
+            match err {
+                SonorustError::GuildIdIsNone => {
+                    let lang = self.setting_json.get_bot_lang();
+
+                    let embed = CreateEmbed::new()
+                        .title(lang_t!("msg.only_use_guild_1", lang))
+                        .description(lang_t!("msg.only_use_guild_2", lang))
+                        .colour(Colour::from_rgb(255, 0, 0));
+
+                    if let Err(err) =
+                        eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await
+                    {
+                        log::error!("Cannot send message: {}", err);
+                    }
+                }
+                _ => log::error!("Error on message: {err}"),
             }
-        }
+        };
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match &interaction {
             Interaction::Command(inter) => {
-                if let Err(err) = registers::slash_commands(&ctx, inter).await {
-                    if let Err(err) = err.send_err_responce(&ctx, &interaction).await {
-                        log::error!("Can't respond interaction: {}", err);
+                if let Err(err) = registers::slash_command(self, &ctx, &inter).await {
+                    match err {
+                        SonorustError::GuildIdIsNone => {
+                            let lang = self.setting_json.get_bot_lang();
+
+                            let embed = CreateEmbed::new()
+                                .title(lang_t!("msg.only_use_guild_1", lang))
+                                .description(lang_t!("msg.only_use_guild_2", lang))
+                                .colour(Colour::from_rgb(255, 0, 0));
+
+                            if let Err(err) =
+                                eq_uilibrium::create_response_msg!(inter, &ctx.http, embed = embed)
+                                    .await
+                            {
+                                log::error!("Cannot send message: {}", err);
+                            }
+                        }
+                        _ => log::error!("Error on slash_command: {err}"),
                     }
-                }
+                };
             }
 
             Interaction::Component(inter) => {
-                if let Err(err) = registers::components(&ctx, inter).await {
-                    if let Err(err) = err.send_err_responce(&ctx, &interaction).await {
-                        log::error!("Can't respond interaction: {}", err);
+                if let Err(err) = registers::component(self, &ctx, &inter).await {
+                    match err {
+                        SonorustError::GuildIdIsNone => {
+                            let lang = self.setting_json.get_bot_lang();
+
+                            let embed = CreateEmbed::new()
+                                .title(lang_t!("msg.only_use_guild_1", lang))
+                                .description(lang_t!("msg.only_use_guild_2", lang))
+                                .colour(Colour::from_rgb(255, 0, 0));
+
+                            if let Err(err) =
+                                eq_uilibrium::create_response_msg!(inter, &ctx.http, embed = embed)
+                                    .await
+                            {
+                                log::error!("Cannot send message: {}", err);
+                            }
+                        }
+                        _ => log::error!("Error on component: {err}"),
                     }
                 }
             }
@@ -63,155 +119,191 @@ impl EventHandler for Handler {
     }
 
     async fn voice_state_update(&self, ctx: Context, old: Option<VoiceState>, new: VoiceState) {
-        if let Err(sonorust_err) = registers::voice_state_update(ctx, old, new).await {
-            log::error!("Can't respond voice_state_update: {}", sonorust_err);
+        if let Err(err) = registers::voice_state_update(self, &ctx, &old, &new).await {
+            log::error!("Error on voice_state_update: {}", err)
         }
     }
 }
 
-pub async fn bot_start() {
-    // json ファイルの初期設定
-    {
-        let settings_json = SettingsJson::new();
-        let mut lock = SETTINGS_JSON.write().unwrap();
-        *lock = settings_json;
-    }
+#[tokio::main]
+async fn main() {
+    sonorust_logger::setup_logger();
 
-    // sbv2 の準備
-    let (sbv2_client, sbv2_path) = {
-        let lock = SETTINGS_JSON.read().unwrap();
-        (
-            Sbv2Client::from(&lock.host, lock.port),
-            lock.sbv2_path.clone(),
-        )
-    };
+    // Decoration
+    let title = "Sonorust App";
+    let top_border = "╭".to_string() + &"─".repeat(38) + "╮";
+    let bottom_border = "╰".to_string() + &"─".repeat(38) + "╯";
+    let left_gradient = "░▒▓█";
+    let right_gradient = "█▓▒░";
 
-    /// 起動できなかった場合に待機してから終了する処理
-    async fn exit_program(text: &str) {
-        log::error!("{}", text);
-        tokio::time::sleep(Duration::from_secs(30)).await;
+    println!("\n\x1b[1;32m{}", top_border);
+    println!("│{:^38}│", "");
+    println!(
+        "│    {:^38}   │",
+        format!("\x1b[1;32m{} {} {}", left_gradient, title, right_gradient)
+    );
+    println!("│{:^38}│", "");
+    println!("{}\x1b[0m\n", bottom_border);
 
-        std::process::exit(1);
-    }
+    // main
+    let downloads_folder = PathBuf::from("appdata/downloads");
 
-    let infer_use = SettingsJson::get_sbv2_inferuse();
-
-    // sbv2の起動 (python版の場合)
-    if let InferUse::Python = infer_use {
-        if !sbv2_client.is_api_activation().await {
-            if let Some(path) = sbv2_path {
-                if cfg!(target_os = "windows") {
-                    log::info!("Waiting for SBV2 API to start...");
-
-                    if let Err(_) = sbv2_client.launch_api_win(&path).await {
-                        exit_program("The API could not be started. Exit the program.").await;
-                    }
-
-                    log::info!("The API has been started.");
-                }
-            }
-        }
-
-        if let Err(_) = sbv2_client.update_modelinfo().await {
-            exit_program("Failed to Connect SBV2 API.").await;
-        }
-    }
-
-    // 必要なモデルのダウンロードと準備 (Rust版の場合)
-    if let InferUse::Rust = infer_use {
-        if let Err(_) = TtsModelHolder::download_tokenizer_and_debert().await {
-            exit_program("Failed to download Model. Exit the program.").await;
-        };
-
-        log::info!("Loading Sbv2 Model...");
-        TtsModelHolder::load_to_static(
-            "./appdata/downloads/deberta.onnx",
-            "./appdata/downloads/tokenizer.json",
-            None,
-        )
+    tokio::fs::create_dir_all(&downloads_folder)
         .await
-        .expect("Failed to Init Sbv2");
+        .expect("Failed create folder");
 
-        // モデルの読み込み
-        let models_path = PathBuf::from("./sbv2api_models");
-        if !models_path.exists() {
-            create_dir_all(&models_path)
-                .await
-                .expect("Failed create Folder");
-        }
-
-        let mut entries = tokio::fs::read_dir(&models_path)
-            .await
-            .expect("Falied read Folder");
-
-        let mut model_paths = vec![];
-        while let Ok(Some(e)) = entries.next_entry().await {
-            let file_path = e.path();
-            let Some(extension) = file_path.extension() else {
-                continue;
-            };
-
-            if extension == "sbv2" {
-                model_paths.push(file_path);
-            }
-        }
-
-        if model_paths.len() == 0 {
-            exit_program("No model, please put sbv2 file in `sbv2api_models`.").await;
-        }
-
-        let mut lock = TTS_MODEL_HOLDER.lock().await;
-        let model_holder = lock.as_mut().unwrap();
-        for i in &model_paths {
-            let model_name = match i.file_stem() {
-                Some(stem) => stem.to_string_lossy().to_string(),
-                None => "".to_string(),
-            };
-
-            log::info!("Loaded Model: {}", model_name);
-            model_holder
-                .load_from_sbv2file_path(&model_name, i)
-                .expect("Failed load Sbv2 File");
-        }
-    }
+    let setting_json = SettingJson::init("appdata/setting.json")
+        .await
+        .expect("Failed init json");
 
     // カタカナ読み辞書の初期化
-    if let Err(_) = EngToKana::download_init_dic().await {
-        exit_program("Failed to download the kana reading dictionary. Exit the program.").await;
+    EngToKana::download_and_init_dic("appdata/downloads")
+        .await
+        .expect("Failed init engtokana dict");
+
+    // データベースの初期化
+    sonorust_db::init_database("appdata/database.db")
+        .await
+        .expect("Failed init database");
+
+    // 推論部分の初期化
+    let infer_client: Either<Sbv2PythonClient, Sbv2RustClient> = match setting_json.infer_use {
+        InferUse::Python => {
+            // windowsの場合のみsbv2の自動起動に対応
+            if let Some(path) = &setting_json.sbv2_path {
+                if cfg!(target_os = "windows") {
+                    Sbv2PythonClient::launch_api_windows(
+                        path,
+                        &setting_json.host,
+                        setting_json.port,
+                    )
+                    .await
+                    .expect("Failed launch sbv2api");
+                }
+            }
+
+            let python_client =
+                match Sbv2PythonClient::connect(&setting_json.host, setting_json.port).await {
+                    Ok(client) => client,
+                    Err(_) => {
+                        log::error!("SBV2 API is not running");
+                        tokio::time::sleep(Duration::from_secs(10)).await;
+                        panic!("SBV2 API is not running")
+                    }
+                };
+
+            Either::Left(python_client)
+        }
+
+        InferUse::Rust => {
+            // 必要なもののダウンロードなど
+            let download_client = Sbv2RustDownloads::new();
+
+            log::info!("Preparing for sbv2...");
+            let (r1, r2) = tokio::join!(
+                download_client.download_debertaonnx(&downloads_folder),
+                download_client.download_tokenizer(&downloads_folder),
+            );
+
+            match (r1, r2) {
+                (Ok(_), Ok(_)) => (),
+                _ => {
+                    log::warn!("Failed Download sbv2 Model.")
+                }
+            }
+
+            let result = download_client
+                .download_and_set_onnxruntime(
+                    &downloads_folder,
+                    setting_json.is_gpu_version_runtime,
+                )
+                .await;
+
+            if let Err(_) = result {
+                log::warn!("Automatic download of ONNXRuntime is only available for Windows.");
+            }
+
+            // rust client の作成
+            let count = setting_json.max_load_model_count.map(|i| i as u64);
+            let deberta_path = downloads_folder.join("deberta.onnx");
+            let tokenizer_path = downloads_folder.join("tokenizer.json");
+
+            let result = Sbv2RustClient::new_from_model_folder(
+                deberta_path.as_path(),
+                tokenizer_path.as_path(),
+                setting_json.onnx_model_path.as_path(),
+                count,
+            )
+            .await;
+
+            let rust_client = match result {
+                Ok(c) => c,
+                Err(Sbv2RustError::ModelNotFound) => {
+                    log::error!("Model Not Found.");
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    panic!("Model Not Found");
+                }
+                _ => panic!("Failed create Sbv2RustClient"),
+            };
+
+            log::info!("Preparing complete.");
+            Either::Right(rust_client)
+        }
     };
 
-    // BOTのclient作成
-    let intents = GatewayIntents::all();
+    let setting_json = Arc::new(RwLock::new(setting_json));
+    let infer_client = Arc::new(TokioRwLock::new(infer_client));
+    let read_channels = Arc::new(RwLock::new(HashMap::new()));
+    let channel_queues = Arc::new(RwLock::new(HashMap::new()));
 
-    // ログインできなかった場合トークンをもう一度入力してもらいログインを試す
     loop {
-        let token = setting_inputter::get_or_set_token()
-            .await
-            .expect("Can't open file");
+        let bot_token = setting_json.with_read(|lock| lock.bot_token.clone());
 
-        let mut client = Client::builder(token, intents)
-            .event_handler(Handler)
+        let mut client = Client::builder(&bot_token, GatewayIntents::all())
+            .event_handler(Handler {
+                setting_json: setting_json.clone(),
+                infer_client: infer_client.clone(),
+                read_channels: read_channels.clone(),
+                channel_queues: channel_queues.clone(),
+            })
             .register_songbird()
             .await
             .expect("Can't create client");
 
-        // Bot にログイン
         let result = client.start().await;
 
         match result {
             // Intents が足りてなかった場合
             Err(serenity::Error::Gateway(DisallowedGatewayIntents)) => {
-                exit_program(
-                "Missing intent, please change the settings in the Discord Developer Portal. (https://discord.com/developers/applications)"
-            ).await;
+                log::error!(
+                    "Missing intent, please change the settings in the Discord Developer Portal. (https://discord.com/developers/applications)"
+                );
+
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                break;
             }
 
             // ログインできなかった場合
             Err(_) => {
-                log::info!("Login failed. Input Discord Bot Token.");
-                setting_inputter::input_token()
+                log::error!("Login failed. Input Discord Bot Token.");
+                tokio::time::sleep(Duration::from_secs(1)).await;
+
+                let token = SettingJson::token_reinput()
                     .await
-                    .expect("Can't open file");
+                    .expect("Failed token input");
+
+                {
+                    let cloned = {
+                        let mut lock = setting_json.write().unwrap();
+                        lock.bot_token = token;
+
+                        lock.clone()
+                    };
+
+                    SettingJson::write_json("appdata/setting.json", &cloned)
+                        .await
+                        .expect("Failed write json");
+                }
 
                 continue;
             }
@@ -219,11 +311,4 @@ pub async fn bot_start() {
             Ok(_) => break,
         }
     }
-}
-
-fn main() {
-    sonorust_logger::setup_logger();
-
-    let runtime = Runtime::new().unwrap();
-    runtime.block_on(async { bot_start().await });
 }

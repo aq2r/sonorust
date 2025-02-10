@@ -1,0 +1,20 @@
+[package]
+name = "infer_api"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+reqwest.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+log.workspace = true
+sbv2_core.workspace = true
+indicatif.workspace = true
+uuid.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+env_logger.workspace = true

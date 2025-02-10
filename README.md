@@ -1,69 +1,33 @@
-English (Google or DeepL translate) | [日本語](./README-ja.md)
+English (Used Google or DeepL translate) | [日本語](./README-ja.md)
 
 # sonorust
-Discord bot for Style-Bert-VITS2
+A Discord bot that can read aloud using `server_fastapi.py`
 
-This is a Discord bot for SBV2's `server_fastapi.py`.
+[litagin02/Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) or sbv2_core from [tuna2134/sbv2-api](https://github.com/tuna2134/sbv2-api).
 
-Download: [releases](https://github.com/aq2r/sonorust/releases)
+Download: [Releases](https://github.com/aq2r/sonorust/releases)
 
-## App Features
+## App features
 
-- Change `Model`, `Speaker`, `Style` for each user
+- Change `Model`, `Speaker` and `Style` for each user [^1]
 
-- Prefix Changes
+- When using litagin02/Style-Bert-VITS2, the API will be automatically started when the app starts [^2]
 
-- Automatically launch SBV2 API when the app starts
+- When using tuna2134/sbv2-api, the necessary models, ONNXRuntime, etc. are automatically downloaded [^2]
 
-- Server dictionary and some server options
+- Change prefix
 
-- Supports Japanese and English (Google or DeepL translate)
+- Functions such as automatic voice chat participation and server dictionary
 
-## How to use
+- Supports Japanese and English [^3]
 
-After launching the file, follow the on-screen instructions to complete the initial setup.
+[^1]: Speaker and Style switching is only supported by litagin02/Style-Bert-VITS2
+[^2]: Only supported by Windows, operation not confirmed on other platforms
+[^3]: Google Translate and DeepL Translate are used for English.
 
-- Whether to make it the default setting
+## How to use and feature explanation
 
-    - If you do not want to use the default settings, enter the prefix, SBV2 URL, etc.
-
-- Bot language settings
-
-- Language settings to use for SBV2 inference
-
-- Whether to set the SBV2 path for automatic startup
-
-- Enter the Bot Token (All Intents must be turned ON in the Developer Portal)
-
-## Basic Commands
-
-`prefix - The command name` can be used to execute bot commands. 
-
-It can also be used from slash commands. (By default, `sn!`)
-
-### help
-
-Display the list of bot commands
-
-### join
-
-Join a voice channel that the user is in
-
-### leave
-
-Leave a voice channel
-
-<sub>
-The other 10 commands can be seen using the `help` command.
-</sub>
-
-<br>
-
-## sbv2-api
-
-If you want to use https://github.com/tuna2134/sbv2-api
-
-On the initial setup screen, select `tuna2134/sbv2-api` and put your sbv2 files in the `sbv2api_models` folder.
+TODO...
 
 ## Link
 

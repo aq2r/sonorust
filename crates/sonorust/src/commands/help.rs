@@ -1,16 +1,11 @@
-use langrustang::lang_t;
+use langrustang::{format_t, lang_t};
 use serenity::all::{Context, CreateCommand, CreateEmbed};
-use setting_inputter::SettingsJson;
 
-use crate::crate_extensions::SettingsJsonExtension;
+use crate::_langrustang_autogen::Lang;
 
-pub async fn help(ctx: &Context) -> CreateEmbed {
-    let lang = SettingsJson::get_bot_lang();
-    let prefix = SettingsJson::get_prefix();
-
+pub async fn help(ctx: &Context, lang: Lang, prefix: &str) -> CreateEmbed {
     const IS_INLINE: bool = false;
 
-    // TODO: コマンドヘルプの追加
     let fields = [
         (
             lang_t!("ping.command.name"),
@@ -58,6 +53,11 @@ pub async fn help(ctx: &Context) -> CreateEmbed {
             IS_INLINE,
         ),
         (
+            lang_t!("autojoin.command.name"),
+            &format_t!("autojoin.command.description", lang, prefix),
+            IS_INLINE,
+        ),
+        (
             lang_t!("dict.command.name"),
             lang_t!("dict.command.description", lang),
             IS_INLINE,
@@ -77,6 +77,21 @@ pub async fn help(ctx: &Context) -> CreateEmbed {
             lang_t!("wav.command.description", lang),
             IS_INLINE,
         ),
+        (
+            lang_t!("read_add.command.name"),
+            lang_t!("read_add.command.description", lang),
+            IS_INLINE,
+        ),
+        (
+            lang_t!("read_remove.command.name"),
+            lang_t!("read_remove.command.description", lang),
+            IS_INLINE,
+        ),
+        (
+            lang_t!("clear.command.name"),
+            lang_t!("clear.command.description", lang),
+            IS_INLINE,
+        ),
     ];
 
     let bot_user = ctx.cache.current_user();
@@ -93,8 +108,6 @@ pub async fn help(ctx: &Context) -> CreateEmbed {
         .thumbnail(avatar_url)
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("help").description(lang_t!("help.command.description", lang))
 }

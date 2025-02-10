@@ -1,30 +1,37 @@
 use langrustang::{format_t, lang_t};
 use serenity::all::{ComponentInteraction, ComponentInteractionDataKind, Context, EditMessage};
-use setting_inputter::SettingsJson;
 use sonorust_db::GuildDataMut;
 
 use crate::{
-    crate_extensions::SettingsJsonExtension,
-    errors::{NoneToSonorustError, SonorustError},
-    registers::APP_OWNER_ID,
+    crate_extensions::{serenity::SerenityHttpExt, sonorust_setting::SettingJsonExt},
+    errors::SonorustError,
+    Handler,
 };
 
 pub async fn server(
+    handler: &Handler,
     ctx: &Context,
     interaction: &ComponentInteraction,
 ) -> Result<(), SonorustError> {
-    let guild_id = interaction.guild_id.ok_or_sonorust_err()?;
+    let lang = handler.setting_json.get_bot_lang();
+
+    let guild_id = interaction
+        .guild_id
+        .ok_or_else(|| SonorustError::GuildIdIsNone)?;
     let inter_member = guild_id.member(&ctx.http, interaction.user.id).await?;
 
-    let lang = SettingsJson::get_bot_lang();
-
-    let bot_owner_id = {
-        let app_owner_id = APP_OWNER_ID.read().unwrap();
-        *app_owner_id
+    let is_bot_owner = {
+        let bot_owner_id = ctx.http.get_bot_owner_id().await;
+        interaction.user.id == bot_owner_id
     };
 
-    let is_admin = inter_member.permissions(&ctx.cache)?.administrator();
-    let is_bot_owner = { bot_owner_id == Some(interaction.user.id) };
+    let is_admin = {
+        #[allow(deprecated)]
+        match inter_member.permissions(&ctx.cache) {
+            Ok(permissons) => permissons.administrator(),
+            Err(_) => false,
+        }
+    };
 
     let send_ephemeral_msg = |content: &str| {
         eq_uilibrium::create_response_msg!(
@@ -34,6 +41,12 @@ pub async fn server(
             ephemeral = true
         )
     };
+
+    // 管理者でもbotの所有者でもなければ
+    if !is_admin && !is_bot_owner {
+        send_ephemeral_msg(lang_t!("msg.only_admin", lang)).await?;
+        return Ok(());
+    }
 
     // 選択した値を取得
     let choice_value = match &interaction.data.kind {
@@ -45,12 +58,6 @@ pub async fn server(
             return Ok(());
         }
     };
-
-    // 管理者でもbotの所有者でもなければ
-    if !is_admin && !is_bot_owner {
-        send_ephemeral_msg(lang_t!("msg.only_admin", lang)).await?;
-    }
-
     // サーバーデータの更新
     let new_bool = {
         let mut guilddata_mut = GuildDataMut::from(guild_id).await?;
@@ -62,7 +69,6 @@ pub async fn server(
         };
 
         let new_bool = match choice_value {
-            lang_t!("guild.is_auto_join") => change_value(&mut guilddata_mut.options.is_auto_join),
             lang_t!("guild.is_dic_onlyadmin") => {
                 change_value(&mut guilddata_mut.options.is_dic_onlyadmin)
             }
@@ -97,7 +103,6 @@ pub async fn server(
 
     // 元の メッセージと embed を取得して選択された値を変更
     let choice_value_title = match choice_value {
-        lang_t!("guild.is_auto_join") => lang_t!("guild.desc.is_auto_join", lang),
         lang_t!("guild.is_dic_onlyadmin") => lang_t!("guild.desc.is_dic_onlyadmin", lang),
         lang_t!("guild.is_entrance_exit_log") => lang_t!("guild.desc.is_entrance_exit_log", lang),
         lang_t!("guild.is_entrance_exit_play") => lang_t!("guild.desc.is_entrance_exit_play", lang),

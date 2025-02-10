@@ -1,11 +1,10 @@
 use langrustang::{format_t, lang_t};
 use serenity::all::{CommandOptionType, CreateCommand, CreateCommandOption, UserId};
-use setting_inputter::SettingsJson;
 use sonorust_db::UserDataMut;
 
-use crate::{crate_extensions::SettingsJsonExtension, errors::SonorustError};
+use crate::{_langrustang_autogen::Lang, errors::SonorustError};
 
-pub async fn length(user_id: UserId, length: f64) -> Result<String, SonorustError> {
+pub async fn length(user_id: UserId, length: f64, lang: Lang) -> Result<String, SonorustError> {
     // 0.1 から 5.0 の範囲外ならその範囲に収める
     let length = match length {
         ..=0.1 => 0.1,
@@ -24,13 +23,10 @@ pub async fn length(user_id: UserId, length: f64) -> Result<String, SonorustErro
         userdata_mut.update().await?;
     }
 
-    let lang = SettingsJson::get_bot_lang();
     Ok(format_t!("length.changed", lang, length_rounded))
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("length")
         .description(lang_t!("length.command.description", lang))
         .add_option(

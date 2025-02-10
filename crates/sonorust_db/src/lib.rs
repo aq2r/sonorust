@@ -1,122 +1,132 @@
-mod errors;
 mod guild;
 mod user;
 
-pub use errors::SonorustDBError;
-pub use guild::{GuildData, GuildDataMut, GuildOptions};
-pub use user::{UserData, UserDataMut};
+pub use guild::GuildData;
+pub use guild::GuildDataMut;
+pub use guild::GuildOptions;
+pub use user::UserData;
+pub use user::UserDataMut;
 
-use std::{
-    path::PathBuf,
-    sync::{LazyLock, Mutex},
-};
+use guild::GuildOptionsStr;
 
-use rusqlite::{params, Connection};
+use std::{fs::File, path::PathBuf, str::FromStr, sync::OnceLock};
 
-static DATABASE_PATH: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from("./appdata/database.db"));
+use sqlx::{sqlite::SqliteConnectOptions, SqlitePool};
 
-static DATABASE_CONN: LazyLock<Mutex<Connection>> = LazyLock::new(|| {
-    std::fs::create_dir_all(DATABASE_PATH.ancestors().nth(1).unwrap()).expect("Can't open file.");
+static DB_POOL: OnceLock<SqlitePool> = OnceLock::new();
 
-    let mut conn = Connection::open(DATABASE_PATH.as_path()).expect("Can't open file");
-    init_database(&mut conn).expect("Failed to init database.");
-    Mutex::new(conn)
-});
+pub async fn init_database(database_path: &str) -> Result<(), sqlx::Error> {
+    let database_pathbuf: PathBuf = database_path.into();
 
-pub fn init_database(conn: &mut Connection) -> Result<(), SonorustDBError> {
-    let mut result = || {
-        let txn = conn.transaction()?;
+    if !database_pathbuf.exists() {
+        File::create(&database_pathbuf)?;
+    }
 
-        // 設定の変更
-        txn.execute("PRAGMA foreign_keys = ON;", ())?;
+    let options = SqliteConnectOptions::from_str(database_path)?.pragma("foreign_keys", "ON");
+    let pool = SqlitePool::connect_with(options).await?;
 
-        let sqls = [
-            // user table
-            "
-            CREATE TABLE IF NOT EXISTS user (
-                id INTEGER PRIMARY KEY,
-                discord_id INTEGER NOT NULL UNIQUE,
-                model_name TEXT NOT NULL,
-                speaker_name TEXT NOT NULL,
-                style_name TEXT NOT NULL,
-                length REAL NOT NULL
-            );
-            ",
-            // guild table
-            "
-            CREATE TABLE IF NOT EXISTS guild (
-                id INTEGER PRIMARY KEY,
-                discord_id INTEGER NOT NULL UNIQUE
-            );
-            ",
-            // guild_option table
-            "
-            CREATE TABLE IF NOT EXISTS guild_option (
-                id INTEGER PRIMARY KEY,
-                option_name TEXT NOT NULL UNIQUE
-            );
-            ",
-            // guild と guild_option の中間テーブル
-            "
-            CREATE TABLE IF NOT EXISTS guild_guild_options (
-                id INTEGER PRIMARY KEY,
-                guild_table_id INTEGER NOT NULL,
-                guild_option_table_id INTEGER NOT NULL,
+    let mut tx = pool.begin().await?;
 
-                FOREIGN KEY (guild_table_id) REFERENCES guild(id),
-                FOREIGN KEY (guild_option_table_id) REFERENCES guild_option(id),
-                UNIQUE (guild_table_id, guild_option_table_id)
-            );
-            ",
-            // guild_dict table
-            "
-            CREATE TABLE IF NOT EXISTS guild_dict (
-                id INTEGER PRIMARY KEY,
-                guild_table_id INTEGER NOT NULL,
-                before_text TEXT NOT NULL,
-                after_text TEXT NOT NULL,
+    let sqls = [
+        // user table
+        "
+        CREATE TABLE IF NOT EXISTS user (
+            id INTEGER PRIMARY KEY,
+            discord_id INTEGER NOT NULL UNIQUE,
+            model_name TEXT NOT NULL,
+            speaker_name TEXT NOT NULL,
+            style_name TEXT NOT NULL,
+            length REAL NOT NULL
+        );
+        ",
+        // guild table
+        "
+        CREATE TABLE IF NOT EXISTS guild (
+            id INTEGER PRIMARY KEY,
+            discord_id INTEGER NOT NULL UNIQUE
+        );
+        ",
+        // guild_option table
+        "
+        CREATE TABLE IF NOT EXISTS guild_option (
+            id INTEGER PRIMARY KEY,
+            option_name TEXT NOT NULL UNIQUE
+        );
+        ",
+        // guild と guild_option の中間テーブル
+        "
+        CREATE TABLE IF NOT EXISTS guild_guild_options (
+            id INTEGER PRIMARY KEY,
+            guild_table_id INTEGER NOT NULL,
+            guild_option_table_id INTEGER NOT NULL,
 
-                FOREIGN KEY (guild_table_id) REFERENCES guild(id),
-                UNIQUE (guild_table_id, before_text)
-            );
-            ",
-        ];
+            FOREIGN KEY (guild_table_id) REFERENCES guild(id),
+            FOREIGN KEY (guild_option_table_id) REFERENCES guild_option(id),
+            UNIQUE (guild_table_id, guild_option_table_id)
+        );
+        ",
+        // guild_dict table
+        "
+        CREATE TABLE IF NOT EXISTS guild_dict (
+            id INTEGER PRIMARY KEY,
+            guild_table_id INTEGER NOT NULL,
+            before_text TEXT NOT NULL,
+            after_text TEXT NOT NULL,
 
-        for i in sqls {
-            txn.execute(i, ())?;
-        }
+            FOREIGN KEY (guild_table_id) REFERENCES guild(id),
+            UNIQUE (guild_table_id, before_text)
+        );
+        ",
+        // guild_auto_join
+        "
+        CREATE TABLE IF NOT EXISTS guild_auto_join (
+            id INTEGER PRIMARY KEY,
+            guild_table_id INTEGER NOT NULL,
+            voice_channel_id INTEGER NOT NULL,
+            text_channel_id INTEGER NOT NULL,
 
-        // ギルドオプションの追加
-        let guild_options = [
-            "is_dic_onlyadmin",
-            "is_auto_join",
-            "is_entrance_exit_log",
-            "is_entrance_exit_play",
-            "is_notice_attachment",
-            "is_if_long_fastread",
-        ];
+            FOREIGN KEY (guild_table_id) REFERENCES guild(id)
+            UNIQUE (voice_channel_id, text_channel_id)
+        );
+        ",
+    ];
 
-        for i in guild_options {
-            txn.execute(
-                "INSERT INTO guild_option (option_name) VALUES (?1) ON CONFLICT DO NOTHING",
-                params![i],
-            )?;
-        }
+    for i in sqls {
+        sqlx::query(i).execute(&mut *tx).await?;
+    }
 
-        txn.commit()?;
-        Ok(())
-    };
+    // ギルドオプションの追加
+    let guild_options = [
+        GuildOptionsStr::IsDicOnlyAdmin,
+        GuildOptionsStr::IsEntranceExitLog,
+        GuildOptionsStr::IsEntranceExitPlay,
+        GuildOptionsStr::IsIfLongFastRead,
+        GuildOptionsStr::IsNoticeAttachment,
+    ];
 
-    result().map_err(|err| SonorustDBError::InitDatabase(err))
+    for i in guild_options {
+        sqlx::query("INSERT INTO guild_option (option_name) VALUES (?1) ON CONFLICT DO NOTHING")
+            .bind(i.as_str())
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    tx.commit().await?;
+
+    DB_POOL.set(pool).expect("Failed to set DB_POOL");
+    Ok(())
 }
 
-#[cfg(test)]
 mod tests {
-    use super::*;
-
     #[ignore]
-    #[test]
-    fn test_init_database() {
-        let _ = *DATABASE_CONN;
+    #[tokio::test]
+    async fn test_init_database() -> anyhow::Result<()> {
+        use super::*;
+        use tokio::fs::create_dir_all;
+
+        create_dir_all("appdata").await?;
+        init_database("appdata/database.db").await?;
+
+        Ok(())
     }
 }

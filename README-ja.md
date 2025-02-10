@@ -1,67 +1,34 @@
 [English (Google or DeepL translate)](./README.md) | 日本語
 
 # sonorust
-Discord bot for Style-Bert-VITS2
 
-SBV2の `server_fastapi.py` 用の Discord Botです。
+[litagin02/Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) の `server_fastapi.py`
 
-ダウンロード: [releases](https://github.com/aq2r/sonorust/releases)
+または [tuna2134/sbv2-api](https://github.com/tuna2134/sbv2-api) の sbv2_core を利用して読み上げができる Discord bot。
+
+Download: [Releases](https://github.com/aq2r/sonorust/releases)
 
 ## 機能
 
-- ユーザーごとの `Model`, `Speaker`, `Style` の変更
+- ユーザーごとに `Model` `Speaker` `Style` を変更 [^1]
+
+- litagin02/Style-Bert-VITS2 使用の場合はアプリ起動時に API を自動起動 [^2]
+
+- tuna2134/sbv2-api 使用の場合は必要なモデル、ONNXRuntime などを自動ダウンロード [^2]
 
 - プレフィックスの変更
 
-- アプリ起動時に SBV2 の API を自動起動
+- ボイスチャットへの自動参加機能やサーバー辞書などの機能
 
-- サーバー辞書といくつかのサーバーオプション
+- 日本語と英語に対応 [^3]
 
-- 日本語と英語 (Google or DeepL translate) に対応
+[^1]: Speaker, Style の切り替えは litagin02/Style-Bert-VITS2 のみ対応
+[^2]: Windows のみ対応、また Windows 以外は動作未確認
+[^3]: 英語はGoogle Translate, DeepL Translate を利用しています。
 
-## 使用方法
+## 使用方法と機能解説
 
-ファイルを起動した後、表示に従って初期設定をします。
-
-- デフォルト設定にするか
-    
-    - デフォルト設定でない場合、prefixやSBV2のURLなどを入力します。
-
-- Botの言語設定
-
-- SBV2の推論に使う言語設定
-
-- 自動起動のためにSBV2のパスを設定するかどうか
-
-- Bot Tokenの入力 (Developer Portal から Intent すべてをONにしておく必要があります)
-
-## 基本的なコマンド
-
-prefix - コマンド名 でBotのコマンドを使用できます。また、スラッシュコマンドからも使用できます。 (デフォルトでは `sn!` )
-
-### help
-
-Botのコマンド一覧を表示
-
-### join
-
-使用者がいるボイスチャンネルに参加
-
-### leave
-
-ボイスチャンネルから退席
-
-<sub>
-その他 10 個のコマンドは `help` コマンドから確認できます。
-</sub>
-
-<br>
-
-## sbv2-api
-
-https://github.com/tuna2134/sbv2-api を使用したい場合は、
-
-初期設定画面で `tuna2134/sbv2-api` を選択し、`sbv2api_models` フォルダに sbv2 ファイルを入れてください。
+TODO...
 
 ## Link
 

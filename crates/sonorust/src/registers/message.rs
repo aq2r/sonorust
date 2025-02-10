@@ -1,64 +1,81 @@
-use std::{collections::HashMap, time};
+use std::{collections::HashMap, sync::OnceLock, time::Instant};
 
+use either::Either;
 use engtokana::EngToKana;
 use langrustang::{format_t, lang_t};
 use regex::Regex;
 use serenity::all::{Context, CreateMessage, EditMessage, Message};
-use setting_inputter::{settings_json::SETTINGS_JSON, SettingsJson};
 use sonorust_db::GuildData;
 
 use crate::{
-    commands::{self, Either},
-    crate_extensions::{play_on_voice_channel, sbv2_api::READ_CHANNELS, SettingsJsonExtension},
+    commands,
+    crate_extensions::{
+        infer_api::InferApiExt, rwlock::RwLockExt, sonorust_setting::SettingJsonExt,
+    },
     errors::SonorustError,
+    Handler,
 };
 
-pub async fn message(ctx: &Context, msg: &Message) -> Result<(), SonorustError> {
-    // 実際の動作は commands フォルダ
-
-    // メッセージを送信したのがBOTだった場合無視
+pub async fn message(handler: &Handler, ctx: &Context, msg: &Message) -> Result<(), SonorustError> {
     if msg.author.bot {
         return Ok(());
     }
 
-    let prefix = SettingsJson::get_prefix();
+    // prefix をキャッシュしておく
+    static PREFIX: OnceLock<String> = OnceLock::new();
 
-    // prefix から始まっているかによって処理を変える
-    match msg.content.starts_with(&prefix) {
-        true => command_processing(ctx, msg, &prefix).await,
-        false => other_processing(ctx, msg).await,
+    let prefix = PREFIX
+        .get_or_init(|| handler.setting_json.with_read(|lock| lock.prefix.clone()))
+        .as_str();
+
+    // コマンドかそうじゃないかで分岐
+    match msg.content.starts_with(prefix) {
+        true => command_processing(handler, ctx, msg, prefix).await?,
+        false => other_processing(handler, ctx, msg).await?,
     }
+
+    Ok(())
 }
 
 /// メッセージの内容がコマンドだった場合の処理
 async fn command_processing(
+    handler: &Handler,
     ctx: &Context,
     msg: &Message,
     prefix: &str,
 ) -> Result<(), SonorustError> {
-    let lang = SettingsJson::get_bot_lang();
+    let lang = handler.setting_json.get_bot_lang();
 
     // メッセージからプレフィックスを除いたものを取得
-    let msg_suffix = &msg.content[prefix.len()..];
+    let command_content = &msg.content[prefix.len()..];
 
-    // コマンドが使用されたときのデバッグログ
+    let command_args: Vec<&str> = command_content.split_whitespace().collect();
+
+    let Some(command_name) = command_args.get(0) else {
+        return Ok(());
+    };
+    let command_rest: Vec<_> = command_args
+        .get(1..)
+        .unwrap_or_else(|| &[])
+        .iter()
+        .collect();
+
     let debug_log = || {
         log::debug!(
-            "MessageCommand used: /{msg_suffix} {{ Name: {}, ID: {} }}",
+            "MessageCommand used: /{command_content} {{ Name: {}, ID: {} }}",
             msg.author.name,
             msg.author.id,
         )
     };
 
-    match msg_suffix {
+    match *command_name {
         "ping" => {
             debug_log();
 
-            // pong を送信
-            let embed = commands::ping::measuring_embed();
+            let embed = commands::ping::measuring_embed(lang);
             let message = CreateMessage::new().embed(embed);
 
-            let now = time::Instant::now();
+            let now = Instant::now();
             let mut send_msg = msg.channel_id.send_message(&ctx.http, message).await?;
             let elapsed = now.elapsed();
 
@@ -71,62 +88,67 @@ async fn command_processing(
         "help" => {
             debug_log();
 
-            let embed = commands::help(ctx).await;
-            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
-        }
-
-        "now" => {
-            debug_log();
-
-            let embed = commands::now(&msg.author).await?;
+            let embed = commands::help(ctx, lang, prefix).await;
             eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
         }
 
         "join" => {
             debug_log();
 
-            let result = commands::join(ctx, msg.guild_id, msg.channel_id, msg.author.id).await;
-
-            let text = match result {
-                Ok(str) => str,
-                Err(str) => str,
-            };
-
-            let help_embed = commands::help(ctx).await;
-            eq_uilibrium::send_msg!(
+            let result = commands::join(
+                handler,
+                ctx,
+                lang,
+                msg.guild_id,
                 msg.channel_id,
-                &ctx.http,
-                content = text,
-                embed = help_embed
+                msg.author.id,
             )
-            .await?;
+            .await;
+
+            match result {
+                Ok(s) => {
+                    let help_embed = commands::help(ctx, lang, prefix).await;
+                    eq_uilibrium::send_msg!(
+                        msg.channel_id,
+                        &ctx.http,
+                        content = s,
+                        embed = help_embed
+                    )
+                    .await?;
+                }
+                Err(s) => {
+                    eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = s).await?;
+                }
+            };
 
             // すでにボイスチャンネルに参加していた場合などは返す
             if let Err(_) = result {
                 return Ok(());
             };
 
-            play_on_voice_channel(
-                ctx,
-                msg.guild_id,
-                msg.channel_id,
-                msg.author.id,
-                lang_t!("join.connected", lang),
-            )
-            .await?;
+            // 音声再生
+            handler
+                .infer_client
+                .play_on_vc(
+                    handler,
+                    ctx,
+                    msg.guild_id,
+                    msg.channel_id,
+                    msg.author.id,
+                    lang_t!("join.connected", lang),
+                )
+                .await?;
         }
-
         "leave" => {
             debug_log();
 
-            let text = commands::leave(ctx, msg.guild_id).await;
+            let text = commands::leave(handler, ctx, lang, msg.guild_id).await;
             msg.channel_id.say(&ctx.http, text).await?;
         }
-
         "model" => {
             debug_log();
 
-            let (embed, components) = commands::model().await;
+            let (embed, components) = commands::model(handler, lang).await;
             eq_uilibrium::send_msg!(
                 msg.channel_id,
                 &ctx.http,
@@ -135,11 +157,10 @@ async fn command_processing(
             )
             .await?;
         }
-
         "speaker" => {
             debug_log();
 
-            let (embed, components) = commands::speaker(msg.author.id).await?;
+            let (embed, components) = commands::speaker(handler, msg.author.id, lang).await?;
             eq_uilibrium::send_msg!(
                 msg.channel_id,
                 &ctx.http,
@@ -148,11 +169,10 @@ async fn command_processing(
             )
             .await?;
         }
-
         "style" => {
             debug_log();
 
-            let (embed, components) = commands::style(msg.author.id).await?;
+            let (embed, components) = commands::style(handler, msg.author.id, lang).await?;
             eq_uilibrium::send_msg!(
                 msg.channel_id,
                 &ctx.http,
@@ -161,24 +181,56 @@ async fn command_processing(
             )
             .await?;
         }
-
-        "server" => {
+        "length" => {
             debug_log();
 
-            let (embed, components) = commands::server(ctx, msg.guild_id, msg.author.id).await?;
-            eq_uilibrium::send_msg!(
-                msg.channel_id,
-                &ctx.http,
-                embed = embed,
-                components = components
-            )
-            .await?;
-        }
+            // 数字部分を取得
+            let Some(length) = command_rest.get(0).map(|i| *i) else {
+                msg.channel_id
+                    .say(&ctx.http, format_t!("length.usage", lang, prefix))
+                    .await?;
+                return Ok(());
+            };
 
+            // 数字に変換できなければ返す
+            let Ok(length) = length.parse::<f64>() else {
+                msg.channel_id
+                    .say(&ctx.http, lang_t!("length.not_num", lang))
+                    .await?;
+                return Ok(());
+            };
+
+            // ユーザーデータを変更してメッセージを送信
+            let content = commands::length(msg.author.id, length, lang).await?;
+            msg.channel_id.say(&ctx.http, content).await?;
+        }
+        "wav" => {
+            debug_log();
+
+            let mut splitn = msg.content.splitn(2, " ");
+
+            // 生成部分を取得
+            let Some(content) = splitn.nth(1) else {
+                msg.channel_id
+                    .say(&ctx.http, format_t!("wav.usage", lang, prefix))
+                    .await?;
+                return Ok(());
+            };
+
+            match commands::wav(handler, msg.author.id, content).await? {
+                Either::Left(attachment) => {
+                    eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, add_file = attachment)
+                        .await?
+                }
+                Either::Right(content) => {
+                    eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = content).await?
+                }
+            };
+        }
         "dict" => {
             debug_log();
 
-            let (embed, components) = commands::dict(ctx, msg.guild_id).await?;
+            let (embed, components) = commands::dict(ctx, msg.guild_id, lang).await?;
             eq_uilibrium::send_msg!(
                 msg.channel_id,
                 &ctx.http,
@@ -187,78 +239,86 @@ async fn command_processing(
             )
             .await?;
         }
+        "now" => {
+            debug_log();
 
+            let embed = commands::now(handler, &msg.author, lang).await?;
+            eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, embed = embed).await?;
+        }
         "reload" => {
             debug_log();
 
-            let content = match commands::reload(msg.author.id).await {
-                Ok(text) => text,
-                Err(_) => {
-                    log::error!(lang_t!("log.fail_conn_api"));
-                    lang_t!("msg.failed.update", lang)
-                }
-            };
+            let content = commands::reload(handler, ctx, msg.author.id, lang).await;
+            msg.channel_id.say(&ctx.http, content).await?;
+        }
+        "server" => {
+            debug_log();
 
+            let (embed, components) =
+                commands::server(ctx, msg.guild_id, msg.author.id, lang).await?;
+
+            eq_uilibrium::send_msg!(
+                msg.channel_id,
+                &ctx.http,
+                embed = embed,
+                components = components
+            )
+            .await?;
+        }
+        "autojoin" => {
+            debug_log();
+
+            let (embed, text) =
+                commands::autojoin(ctx, msg.guild_id, msg.author.id, lang, None, None).await?;
+
+            let mut create_message = CreateMessage::new();
+
+            if let Some(embed) = embed {
+                create_message = create_message.add_embed(embed);
+            }
+
+            if let Some(text) = text {
+                create_message = create_message.content(text);
+            }
+
+            msg.channel_id
+                .send_message(&ctx.http, create_message)
+                .await?;
+        }
+        "read_add" => {
+            debug_log();
+
+            let content =
+                commands::read_add(handler, ctx, msg.guild_id, msg.channel_id, msg.author.id)?;
+            msg.channel_id.say(&ctx.http, content).await?;
+        }
+        "read_remove" => {
+            debug_log();
+
+            let content =
+                commands::read_remove(handler, ctx, msg.guild_id, msg.channel_id, msg.author.id)?;
+            msg.channel_id.say(&ctx.http, content).await?;
+        }
+
+        "clear" => {
+            debug_log();
+
+            let content = commands::clear(handler, ctx, msg.guild_id, msg.author.id).await?;
             msg.channel_id.say(&ctx.http, content).await?;
         }
 
         _ => (),
     }
 
-    if msg_suffix.starts_with("length") {
-        debug_log();
-
-        let args: Vec<_> = msg_suffix.split_whitespace().collect();
-
-        // 数字部分を取得
-        let Some(length) = args.get(1).map(|i| *i) else {
-            msg.channel_id
-                .say(&ctx.http, format_t!("length.usage", lang, prefix))
-                .await?;
-            return Ok(());
-        };
-
-        // 数字に変換できなければ返す
-        let Ok(length): Result<f64, _> = length.parse() else {
-            msg.channel_id
-                .say(&ctx.http, lang_t!("length.not_num", lang))
-                .await?;
-            return Ok(());
-        };
-
-        // ユーザーデータを変更してメッセージを送信
-        let content = commands::length(msg.author.id, length).await?;
-        msg.channel_id.say(&ctx.http, content).await?;
-    }
-
-    if msg_suffix.starts_with("wav") {
-        debug_log();
-
-        let args: Vec<_> = msg_suffix.split_whitespace().collect();
-
-        // 生成部分を取得
-        let Some(content) = args.get(1).map(|i| *i) else {
-            msg.channel_id
-                .say(&ctx.http, format_t!("wav.usage", lang, prefix))
-                .await?;
-            return Ok(());
-        };
-
-        match commands::wav(msg.author.id, content).await? {
-            Either::Left(attachment) => {
-                eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, add_file = attachment).await?
-            }
-            Either::Right(content) => {
-                eq_uilibrium::send_msg!(msg.channel_id, &ctx.http, content = content).await?
-            }
-        };
-    }
-
     Ok(())
 }
 
-/// メッセージの内容がコマンド以外だった場合の処理
-async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustError> {
+// コマンド以外だった時の処理 (主にvcで音声再生)
+async fn other_processing(
+    handler: &Handler,
+    ctx: &Context,
+    msg: &Message,
+) -> Result<(), SonorustError> {
     // セミコロンから始まっていた場合無視
     if msg.content.starts_with(";") {
         return Ok(());
@@ -270,26 +330,29 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
     };
 
     // 読み上げるチャンネルか確認
-    let read_target_ch = {
-        let read_channels = READ_CHANNELS.read().unwrap();
-        read_channels.get(&guild_id).map(|i| *i)
+    let read_target_ch = handler
+        .read_channels
+        .with_read(|lock| lock.get(&guild_id).cloned());
+
+    let is_read_target = match read_target_ch {
+        Some(hashset) => hashset.contains(&msg.channel_id),
+        None => return Ok(()),
     };
 
-    if read_target_ch != Some(msg.channel_id) {
+    if !is_read_target {
         return Ok(());
     }
 
-    // ギルドの設定を取得
     let guilddata = GuildData::from(guild_id).await?;
 
-    let lang = SettingsJson::get_bot_lang();
+    let lang = handler.setting_json.get_bot_lang();
 
     // 読み上げ用に文字を置換する
     let mut text_replace = TextReplace::new(&msg.content);
 
     text_replace.remove_codeblock();
-    text_replace.remove_discord_obj();
     text_replace.remove_url();
+    text_replace.remove_discord_obj();
 
     text_replace.replace_from_guilddict(&guilddata);
 
@@ -307,37 +370,43 @@ async fn other_processing(ctx: &Context, msg: &Message) -> Result<(), SonorustEr
 
     let replaced_text = text_replace.as_string();
 
-    let read_limit = {
-        let settings_json = SETTINGS_JSON.read().unwrap();
-        settings_json.read_limit
-    };
-
     // read_limit よりも長い場合はその長さに制限する
+    let read_limit = handler.setting_json.with_read(|lock| lock.read_limit);
     let content = match replaced_text.char_indices().nth(read_limit as _) {
         Some((idx, _)) => format_t!("msg.omitted", lang, &replaced_text[..idx]),
         None => replaced_text,
     };
 
-    let lang = SettingsJson::get_bot_lang();
-
     // 設定で ON になっていて添付ファイルがあるなら添付ファイルがあることを知らせる
     if !msg.attachments.is_empty() && guilddata.options.is_notice_attachment {
-        play_on_voice_channel(
+        handler
+            .infer_client
+            .play_on_vc(
+                handler,
+                ctx,
+                msg.guild_id,
+                msg.channel_id,
+                msg.author.id,
+                lang_t!("msg.attachments", lang),
+            )
+            .await?;
+    }
+
+    handler
+        .infer_client
+        .play_on_vc(
+            handler,
             ctx,
             msg.guild_id,
             msg.channel_id,
             msg.author.id,
-            lang_t!("msg.attachments", lang),
+            &content,
         )
         .await?;
-    }
-
-    play_on_voice_channel(ctx, msg.guild_id, msg.channel_id, msg.author.id, &content).await?;
 
     Ok(())
 }
 
-// 読み方を編集する用 (サーバー辞書など)
 #[derive(Debug, Clone)]
 pub struct TextReplace {
     text: String,

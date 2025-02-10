@@ -1,22 +1,18 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use langrustang::lang_t;
 use serenity::all::{ChannelId, Context, CreateCommand, GuildId, UserId};
-use setting_inputter::SettingsJson;
 
-use crate::crate_extensions::{
-    sbv2_api::{CHANNEL_QUEUES, READ_CHANNELS},
-    SettingsJsonExtension,
-};
+use crate::{Handler, _langrustang_autogen::Lang, crate_extensions::rwlock::RwLockExt};
 
 pub async fn join(
+    handler: &Handler,
     ctx: &Context,
+    lang: Lang,
     guild_id: Option<GuildId>,
     channel_id: ChannelId,
     user_id: UserId,
 ) -> Result<&'static str, &'static str> {
-    let lang = SettingsJson::get_bot_lang();
-
     // guild_id を取得、DM などの場合返す
     let Some(guild_id) = guild_id else {
         return Err(lang_t!("msg.only_use_guild_2", lang));
@@ -29,7 +25,7 @@ pub async fn join(
     }
 
     // ユーザーがいる VC を取得する
-    let user_vc = {
+    let user_in_vc = {
         let Some(guild) = guild_id.to_guild_cached(&ctx.cache) else {
             log::error!(lang_t!("log.fail_get_guild"));
             return Err(lang_t!("join.cannot_connect", lang));
@@ -39,7 +35,7 @@ pub async fn join(
     };
 
     // 使用したユーザーが VC に参加していない場合返す
-    let Some(connect_ch) = user_vc else {
+    let Some(connect_ch) = user_in_vc else {
         return Err(lang_t!("join.after_connecting", lang));
     };
 
@@ -58,22 +54,18 @@ pub async fn join(
     }
 
     // サーバーIDと読み上げるチャンネルIDのペアを登録
-    {
-        let mut read_channels = READ_CHANNELS.write().unwrap();
-        read_channels.insert(guild_id, channel_id);
-    }
+    handler
+        .read_channels
+        .with_write(|lock| lock.insert(guild_id, HashSet::from([channel_id])));
 
     // 読み上げ queue を初期化
-    {
-        let mut channel_queues = CHANNEL_QUEUES.write().unwrap();
-        channel_queues.insert(channel_id, VecDeque::new());
-    }
+    handler
+        .channel_queues
+        .with_write(|lock| lock.insert(guild_id, VecDeque::new()));
 
     Ok(lang_t!("join.connected", lang))
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("join").description(lang_t!("join.command.description", lang))
 }

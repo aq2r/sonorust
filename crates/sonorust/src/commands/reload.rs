@@ -1,36 +1,49 @@
+use anyhow::anyhow;
+use either::Either;
 use langrustang::lang_t;
-use serenity::all::{CreateCommand, UserId};
-use setting_inputter::{settings_json::InferUse, SettingsJson};
+use serenity::all::{Context, CreateCommand, UserId};
 
-use crate::{crate_extensions::SettingsJsonExtension, registers::APP_OWNER_ID};
+use crate::{Handler, _langrustang_autogen::Lang, crate_extensions::rwlock::RwLockExt};
 
-pub async fn reload(user_id: UserId) -> anyhow::Result<&'static str> {
-    let lang = SettingsJson::get_bot_lang();
-
+pub async fn reload(handler: &Handler, ctx: &Context, user_id: UserId, lang: Lang) -> &'static str {
     let app_owner_id = {
-        let lock = APP_OWNER_ID.read().unwrap();
-        *lock
+        match ctx.http.get_current_application_info().await {
+            Ok(info) => match info.owner {
+                Some(owner) => owner.id,
+                None => UserId::new(1),
+            },
+            Err(_) => UserId::new(1),
+        }
     };
+    let onnx_model_folder = handler
+        .setting_json
+        .with_read(|lock| lock.onnx_model_path.clone());
 
-    if Some(user_id) != app_owner_id {
-        return Ok(lang_t!("msg.only_owner", lang));
+    if user_id != app_owner_id {
+        return lang_t!("msg.only_owner", lang);
     }
 
-    let infer_use = SettingsJson::get_sbv2_inferuse();
+    let result = {
+        let mut client = handler.infer_client.write().await;
 
-    match infer_use {
-        InferUse::Python => {
-            let client = SettingsJson::get_sbv2_client();
-            client.update_modelinfo().await?;
-
-            Ok(lang_t!("reload.executed", lang))
+        match client.as_mut() {
+            Either::Left(python_client) => python_client
+                .update_modelinfo()
+                .await
+                .map_err(|err| anyhow!(err)),
+            Either::Right(rust_client) => rust_client
+                .update_model(onnx_model_folder)
+                .await
+                .map_err(|err| anyhow!(err)),
         }
-        InferUse::Rust => Ok(lang_t!("reload.not_supported", lang)),
+    };
+
+    match result {
+        Ok(_) => lang_t!("reload.executed", lang),
+        Err(_) => lang_t!("msg.failed.update", lang),
     }
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("reload").description(lang_t!("reload.command.description", lang))
 }

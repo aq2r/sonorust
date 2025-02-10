@@ -1,39 +1,66 @@
+use either::Either;
+use infer_api::Sbv2PythonInferParam;
 use langrustang::lang_t;
-use sbv2_api::Sbv2Client;
 use serenity::all::{
     CommandOptionType, CreateAttachment, CreateCommand, CreateCommandOption, UserId,
 };
-use setting_inputter::SettingsJson;
 use sonorust_db::UserData;
 
 use crate::{
-    crate_extensions::{sbv2_api::Sbv2ClientExtension as _, SettingsJsonExtension},
+    crate_extensions::{rwlock::RwLockExt, sonorust_setting::SettingJsonExt},
     errors::SonorustError,
+    Handler,
+    _langrustang_autogen::Lang,
 };
 
-use super::Either;
-
 pub async fn wav(
+    handler: &Handler,
     user_id: UserId,
     text: &str,
 ) -> Result<Either<CreateAttachment, &'static str>, SonorustError> {
-    let lang = SettingsJson::get_bot_lang();
+    let lang = handler.setting_json.get_bot_lang();
     let userdata = UserData::from(user_id).await?;
+    let (default_model, language) = handler
+        .setting_json
+        .with_read(|lock| (lock.default_model.clone(), lock.infer_lang.to_string()));
 
-    let Ok(voice_data) = Sbv2Client::infer_from_user(text, &userdata).await else {
-        log::error!(lang_t!("log.fail_inter_not_launch"));
-        return Ok(Either::Right(lang_t!("wav.fail_infer", lang)));
+    let audio_data: Result<Vec<u8>, SonorustError> = {
+        let mut lock = handler.infer_client.write().await;
+
+        match lock.as_mut() {
+            Either::Left(python_client) => {
+                let param = Sbv2PythonInferParam {
+                    model_name: userdata.model_name,
+                    speaker_name: userdata.speaker_name,
+                    style_name: userdata.style_name,
+                    length: userdata.length,
+                    language: language,
+                };
+                python_client
+                    .infer(text, param, &default_model)
+                    .await
+                    .map_err(|err| err.into())
+            }
+
+            Either::Right(rust_client) => rust_client
+                .infer(
+                    text,
+                    &userdata.model_name,
+                    userdata.length as f32,
+                    &default_model,
+                )
+                .await
+                .map_err(|err| err.into()),
+        }
     };
 
-    Ok(Either::Left(CreateAttachment::bytes(
-        voice_data,
-        "audio.mp3",
-    )))
+    match audio_data {
+        Ok(data) => Ok(Either::Left(CreateAttachment::bytes(data, "audio.mp3"))),
+        Err(_) => Ok(Either::Right(lang_t!("wav.fail_infer", lang))),
+    }
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("wav")
         .description(lang_t!("wav.command.description", lang))
         .add_option(

@@ -1,23 +1,25 @@
 [package]
 name = "sonorust"
+version = "0.1.0"
 edition = "2021"
 publish = false
 
 [dependencies]
+engtokana.workspace = true
+infer_api.workspace = true
 sonorust_db.workspace = true
 sonorust_logger.workspace = true
-engtokana.workspace = true
-setting_inputter.workspace = true
-sbv2_api.workspace = true
+sonorust_setting.workspace = true
 langrustang.workspace = true
 eq_uilibrium.workspace = true
 
 serenity.workspace = true
-symphonia.workspace = true
+songbird.workspace = true
+either.workspace = true
 tokio.workspace = true
 log.workspace = true
-songbird.workspace = true
+thiserror.workspace = true
+sqlx.workspace = true
 anyhow.workspace = true
+symphonia.workspace = true
 regex.workspace = true
-sbv2_core.workspace = true
-reqwest.workspace = true

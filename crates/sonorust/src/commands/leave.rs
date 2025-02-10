@@ -1,12 +1,14 @@
 use langrustang::lang_t;
 use serenity::all::{Context, CreateCommand, GuildId};
-use setting_inputter::SettingsJson;
 
-use crate::crate_extensions::{sbv2_api::READ_CHANNELS, SettingsJsonExtension};
+use crate::{Handler, _langrustang_autogen::Lang, crate_extensions::rwlock::RwLockExt};
 
-pub async fn leave(ctx: &Context, guild_id: Option<GuildId>) -> &'static str {
-    let lang = SettingsJson::get_bot_lang();
-
+pub async fn leave(
+    handler: &Handler,
+    ctx: &Context,
+    lang: Lang,
+    guild_id: Option<GuildId>,
+) -> &'static str {
     let Some(guild_id) = guild_id else {
         return lang_t!("msg.only_use_guild_2", lang);
     };
@@ -19,22 +21,26 @@ pub async fn leave(ctx: &Context, guild_id: Option<GuildId>) -> &'static str {
             if let Err(err) = manager.remove(guild_id).await {
                 log::error!("{}: {err}", lang_t!("log.fail_leave_vc"));
                 return lang_t!("leave.cannot_disconnect", lang);
+            } else {
+                log::debug!(
+                    "Leaved voice channel (name: {} id: {guild_id})",
+                    guild_id
+                        .name(&ctx.cache)
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                )
             }
         }
         None => return lang_t!("leave.already", lang),
     }
 
     // 読み上げる対象から外す
-    {
-        let mut read_channels = READ_CHANNELS.write().unwrap();
-        read_channels.remove(&guild_id);
-    }
+    handler
+        .read_channels
+        .with_write(|lock| lock.remove(&guild_id));
 
     lang_t!("leave.disconnected", lang)
 }
 
-pub fn create_command() -> CreateCommand {
-    let lang = SettingsJson::get_bot_lang();
-
+pub fn create_command(lang: Lang) -> CreateCommand {
     CreateCommand::new("leave").description(lang_t!("leave.command.description", lang))
 }

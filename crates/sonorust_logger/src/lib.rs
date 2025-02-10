@@ -8,13 +8,30 @@ pub fn setup_logger() {
     let env_level_str = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
     let env_levelfilter = env_level_str.parse().unwrap_or_else(|_| LevelFilter::Info);
 
+    match env_levelfilter {
+        LevelFilter::Debug | LevelFilter::Trace => {
+            Builder::from_env(env_level)
+                .filter_level(LevelFilter::Off)
+                .filter_module("sonorust", env_levelfilter)
+                .filter_module("sonorust_db", env_levelfilter)
+                .filter_module("sonorust_setting", env_levelfilter)
+                .filter_module("infer_api", env_levelfilter)
+                .filter_module("engtokana", env_levelfilter)
+                .default_format()
+                .init();
+            return;
+        }
+
+        _ => (),
+    }
+
     Builder::from_env(env_level)
         .filter_level(LevelFilter::Off)
         .filter_module("sonorust", env_levelfilter)
         .filter_module("sonorust_db", env_levelfilter)
-        .filter_module("sonorust_logger", env_levelfilter)
+        .filter_module("sonorust_setting", env_levelfilter)
+        .filter_module("infer_api", env_levelfilter)
         .filter_module("engtokana", env_levelfilter)
-        .filter_module("setting_inputter", env_levelfilter)
         .format(move |buf, record| {
             let level = record.level();
             let level_color = match level {
@@ -31,31 +48,18 @@ pub fn setup_logger() {
             let reset = "\x1B[0m";
             let green = "\x1B[32m";
 
-            // 表示レベルが Debug かどうかで動作を変える
-            if env_levelfilter == LevelFilter::Debug {
-                buf.write_fmt(format_args!(
-                    "{level_color}{}{reset} | {green}{}{reset} | {} - {}:{}\n",
-                    level_name,
-                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    record.args(),
-                    record.file().unwrap_or("unknown"),
-                    record.line().unwrap_or(0),
-                ))
-            } else {
-                buf.write_fmt(format_args!(
-                    "{level_color}{}{reset} | {green}{}{reset} | {}\n",
-                    level_name,
-                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    record.args()
-                ))
-            }
+            buf.write_fmt(format_args!(
+                "{level_color}{}{reset} | {green}{}{reset} | {}\n",
+                level_name,
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.args()
+            ))
         })
         .init();
 }
 
 #[cfg(test)]
 mod tests {
-
     #[ignore]
     #[test]
     fn log_test() {

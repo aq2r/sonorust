@@ -1,60 +1,208 @@
 use std::collections::{HashMap, VecDeque};
 
-use langrustang::{format_t, lang_t};
-use serenity::all::{ChannelId, Context, GuildId, UserId, VoiceState};
-use setting_inputter::SettingsJson;
+use langrustang::lang_t;
+use serenity::{
+    all::{ChannelId, Context, GuildId, UserId, VoiceState},
+    futures::{stream::FuturesUnordered, StreamExt},
+};
 use sonorust_db::GuildData;
 
 use crate::{
     crate_extensions::{
-        play_on_voice_channel,
-        sbv2_api::{CHANNEL_QUEUES, READ_CHANNELS},
-        SettingsJsonExtension,
+        infer_api::InferApiExt, rwlock::RwLockExt, sonorust_setting::SettingJsonExt,
     },
     errors::SonorustError,
+    Handler,
 };
 
-use super::message::TextReplace;
-
-#[derive(Debug, Clone, Copy)]
-enum UserAction {
-    Entrance,
-    Exit,
-}
-
 pub async fn voice_state_update(
-    ctx: Context,
-    old: Option<VoiceState>,
-    new: VoiceState,
+    handler: &Handler,
+    ctx: &Context,
+    old: &Option<VoiceState>,
+    new: &VoiceState,
 ) -> Result<(), SonorustError> {
-    auto_join(&ctx, new.guild_id, new.user_id).await?;
+    let mut autojoin_future = None;
+    let mut auto_leave_future = None;
+    let mut log_play_futures = FuturesUnordered::new();
 
     let fn_log_play = |channel_id, user_action| {
-        entrance_exit_log_play(&ctx, new.guild_id, channel_id, new.user_id, user_action)
+        entrance_exit_log_play(
+            handler,
+            ctx,
+            new.guild_id,
+            channel_id,
+            new.user_id,
+            user_action,
+        )
     };
 
     if let Some(old) = old {
         if new.channel_id != old.channel_id {
             if let Some(channel_id) = old.channel_id {
-                fn_log_play(channel_id, UserAction::Exit).await?;
+                log_play_futures.push(fn_log_play(channel_id, UserAction::Exit));
             }
             if let Some(channel_id) = new.channel_id {
-                fn_log_play(channel_id, UserAction::Entrance).await?;
+                log_play_futures.push(fn_log_play(channel_id, UserAction::Entrance));
+                autojoin_future = Some(auto_join(handler, &ctx, new.guild_id, new.user_id));
             }
 
-            auto_exit(&ctx, new.guild_id).await;
+            auto_leave_future = Some(auto_leave(&ctx, new.guild_id));
         }
     } else {
         if let Some(channel_id) = new.channel_id {
-            fn_log_play(channel_id, UserAction::Entrance).await?;
+            log_play_futures.push(fn_log_play(channel_id, UserAction::Entrance));
+            autojoin_future = Some(auto_join(handler, &ctx, new.guild_id, new.user_id));
         }
     }
+
+    // それぞれを同時実行
+    let log_play_futures = async {
+        while let Some(result) = log_play_futures.next().await {
+            result?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let autojoin_future = async {
+        if let Some(future) = autojoin_future {
+            future.await?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let autoleave_future = async {
+        if let Some(future) = auto_leave_future {
+            future.await;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let (r1, r2, r3) = tokio::join!(autojoin_future, log_play_futures, autoleave_future);
+
+    r1?;
+    r2?;
+    r3?;
 
     Ok(())
 }
 
-/// もし自分だけになったら自動退出する処理
-async fn auto_exit(ctx: &Context, guild_id: Option<GuildId>) {
+async fn auto_join(
+    handler: &Handler,
+    ctx: &Context,
+    guild_id: Option<GuildId>,
+    user_id: UserId,
+) -> Result<(), SonorustError> {
+    let lang = handler.setting_json.get_bot_lang();
+
+    // サーバー内ではない場合何もしない
+    let Some(guild_id) = guild_id else {
+        return Ok(());
+    };
+
+    // もしそのサーバーのVCにすでにいる場合何もしない
+    let manager = songbird::get(ctx).await.unwrap().clone();
+    if let Some(_) = manager.get(guild_id) {
+        return Ok(());
+    }
+
+    // ユーザーがいるVCを取得する処理
+    // 使用したユーザーがVCに参加していない場合返す
+    let in_user_channel = {
+        let guild = guild_id.to_guild_cached(&ctx.cache).unwrap();
+        let ch = guild.voice_states.get(&user_id).and_then(|v| v.channel_id);
+
+        // そのチャンネル id にいるユーザーリストを取得
+        let voice_states: &HashMap<UserId, VoiceState> = &guild.voice_states;
+        let in_vc_users = voice_states
+            .iter()
+            .filter(|(_, v)| v.channel_id == ch)
+            .map(|(k, _)| *k)
+            .collect::<Vec<_>>();
+
+        // ユーザーが1人になった時のみ
+        if in_vc_users.len() != 1 {
+            return Ok(());
+        }
+
+        match ch {
+            Some(user_vc) => user_vc,
+            None => return Ok(()),
+        }
+    };
+
+    // そのサーバーの参加リストに含まれるか
+    let guilddata = GuildData::from(guild_id).await?;
+
+    let join_set = match guilddata.autojoin_channels.get(&in_user_channel) {
+        Some(set) => set,
+        None => return Ok(()),
+    };
+
+    // 参加
+
+    // サーバーIDと読み上げるチャンネルIDのペアを登録
+    handler
+        .read_channels
+        .with_write(|lock| lock.insert(guild_id, join_set.clone()));
+
+    // 読み上げ queue を初期化
+    handler
+        .channel_queues
+        .with_write(|lock| lock.insert(guild_id, VecDeque::new()));
+
+    if let Err(_) = manager.join(guild_id, in_user_channel).await {
+        log::error!(lang_t!("log.fail_join_vc"));
+        return Ok(());
+    }
+
+    // メッセージ送信や音声再生を同時実行
+    let mut tasks = FuturesUnordered::new();
+
+    for i in join_set.iter() {
+        tasks.push(i.say(&ctx.http, lang_t!("join.connected", lang)));
+    }
+
+    let send_connected_future = async {
+        while let Some(item) = tasks.next().await {
+            item?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+    let mut play_connected = None;
+
+    // 接続しました 音声
+    if let Some(ch) = join_set.iter().nth(0) {
+        play_connected = Some(handler.infer_client.play_on_vc(
+            handler,
+            ctx,
+            Some(guild_id),
+            *ch,
+            user_id,
+            lang_t!("join.connected", lang),
+        ));
+    }
+
+    let play_connected_future = async {
+        if let Some(future) = play_connected {
+            future.await?;
+        }
+        Ok::<(), SonorustError>(())
+    };
+
+    let (r1, r2) = tokio::join!(send_connected_future, play_connected_future);
+    r1?;
+    r2?;
+
+    log::debug!(
+        "Auto joined: {{ GuildID: {}, ChannelID: {} }}",
+        guild_id,
+        in_user_channel
+    );
+
+    Ok(())
+}
+
+async fn auto_leave(ctx: &Context, guild_id: Option<GuildId>) {
     // サーバー内ではない場合何もしない
     let Some(guild_id) = guild_id else {
         return;
@@ -100,94 +248,15 @@ async fn auto_exit(ctx: &Context, guild_id: Option<GuildId>) {
     log::debug!("Auto exited: {{ GuildID: {} }}", guild_id);
 }
 
-/// サーバー設定で自動参加が ON になっているなら自動参加する処理
-async fn auto_join(
-    ctx: &Context,
-    guild_id: Option<GuildId>,
-    user_id: UserId,
-) -> Result<(), SonorustError> {
-    // サーバー内ではない場合何もしない
-    let Some(guild_id) = guild_id else {
-        return Ok(());
-    };
-
-    let client = SettingsJson::get_sbv2_client();
-
-    // Api が起動していない場合何もしない
-    if !client.is_api_activation().await {
-        return Ok(());
-    }
-
-    // もしそのサーバーのVCにすでにいる場合何もしない
-    let manager = songbird::get(ctx).await.unwrap().clone();
-    if let Some(_) = manager.get(guild_id) {
-        return Ok(());
-    }
-
-    // そのサーバーで VC 自動参加が ON になっていないなら何もしない
-    let guild_data = GuildData::from(guild_id).await?;
-
-    if !guild_data.options.is_auto_join {
-        return Ok(());
-    }
-
-    // ユーザーがいるVCを取得する処理
-    let user_vchannel = {
-        let guild = guild_id.to_guild_cached(&ctx.cache).unwrap();
-        guild.voice_states.get(&user_id).and_then(|v| v.channel_id)
-    };
-
-    // 使用したユーザーがVCに参加していない場合返す
-    let connect_channel = match user_vchannel {
-        Some(user_vc) => user_vc,
-        None => return Ok(()),
-    };
-
-    // もしVCに参加できなかったら返す
-    if let Err(_) = manager.join(guild_id, connect_channel).await {
-        log::error!(lang_t!("log.fail_join_vc"));
-        return Ok(());
-    }
-
-    // サーバーIDと読み上げるチャンネルIDのペアを登録
-    {
-        let mut read_channels = READ_CHANNELS.write().unwrap();
-        read_channels.insert(guild_id, connect_channel);
-    }
-
-    // 読み上げ queue を初期化
-    {
-        let mut channel_queues = CHANNEL_QUEUES.write().unwrap();
-        channel_queues.insert(connect_channel, VecDeque::new());
-    }
-
-    // メッセージを送信して VC で再生
-    let lang = SettingsJson::get_bot_lang();
-
-    let _ = connect_channel
-        .say(&ctx.http, lang_t!("join.connected", lang))
-        .await;
-
-    let _ = play_on_voice_channel(
-        ctx,
-        Some(guild_id),
-        connect_channel,
-        user_id,
-        lang_t!("join.connected", lang),
-    )
-    .await;
-
-    log::debug!(
-        "Auto joined: {{ GuildID: {}, ChannelID: {} }}",
-        guild_id,
-        connect_channel
-    );
-
-    Ok(())
+#[derive(Debug, Clone, Copy)]
+enum UserAction {
+    Entrance,
+    Exit,
 }
 
 /// 入退出のログを残す処理
 async fn entrance_exit_log_play(
+    handler: &Handler,
     ctx: &Context,
     guild_id: Option<GuildId>,
     channel_id: ChannelId,
@@ -238,11 +307,11 @@ async fn entrance_exit_log_play(
         .unwrap_or_else(|| user.global_name.unwrap_or_else(|| user.name));
 
     // 読み上げているチャンネルを取得 取得できなかった場合リターン
-    let log_channel = {
-        let read_channels = READ_CHANNELS.read().unwrap();
+    let log_channels = {
+        let read_channels = handler.read_channels.write().unwrap();
 
         match read_channels.get(&guild_id) {
-            Some(ch) => *ch,
+            Some(ch) => ch.clone(),
             None => return Ok(()),
         }
     };
@@ -256,38 +325,16 @@ async fn entrance_exit_log_play(
             UserAction::Exit => format!("> **{}** さんが退席しました。", user_name),
         };
 
-        log_channel.say(&ctx.http, msg).await?;
+        let mut tasks = FuturesUnordered::new();
+
+        for i in log_channels.iter() {
+            tasks.push(i.say(&ctx.http, &msg));
+        }
+
+        while let Some(item) = tasks.next().await {
+            item?;
+        }
     };
-
-    // チャンネルで読み上げ
-    if guild_data.options.is_entrance_exit_play {
-        let lang = SettingsJson::get_bot_lang();
-
-        let user_name_r = {
-            use crate::_langrustang_autogen::Lang::*;
-
-            match lang {
-                Ja => {
-                    let mut text_replace = TextReplace::new(user_name);
-                    text_replace.eng_to_kana();
-
-                    text_replace.as_string()
-                }
-                _ => user_name,
-            }
-        };
-
-        let msg = match user_action {
-            UserAction::Entrance => format_t!("msg.vc_joined", lang, user_name_r),
-            UserAction::Exit => format_t!("msg.vc_leaved", lang, user_name_r),
-        };
-
-        if let Err(why) =
-            play_on_voice_channel(ctx, Some(guild_id), log_channel, user_id, &msg).await
-        {
-            log::error!("{}: {}", lang_t!("log.err_send_msg"), why);
-        };
-    }
 
     Ok(())
 }

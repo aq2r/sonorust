@@ -1,42 +1,28 @@
-use std::sync::{LazyLock, RwLock};
+use langrustang::format_t;
+use serenity::all::{ActivityData, Command, Context, Ready};
 
-use serenity::all::{Command, Context, Ready, UserId};
+use crate::{
+    crate_extensions::{rwlock::RwLockExt, sonorust_setting::SettingJsonExt},
+    registers::slash_command,
+    Handler,
+};
 
-use crate::registers::slash_commands;
+pub async fn ready(handler: &Handler, ctx: &Context, ready: &Ready) {
+    log::info!("Logged in: {}", ready.user.name);
 
-/// BOT の所有者のユーザーID
-pub static APP_OWNER_ID: LazyLock<RwLock<Option<UserId>>> = LazyLock::new(|| RwLock::new(None));
+    let lang = handler.setting_json.get_bot_lang();
+    let bot_prefix = handler.setting_json.with_read(|lock| lock.prefix.clone());
 
-pub async fn ready(ctx: &Context, ready: &Ready) {
-    log::info!("{} is connected!", ready.user.name);
-
-    // BOT の所有者のユーザーIDを変数に保存
-    let app_owner = ctx
-        .http
-        .get_current_application_info()
-        .await
-        .and_then(|i| Ok(i.owner));
-
-    if let Ok(Some(owner)) = app_owner {
-        let mut app_owner_id = APP_OWNER_ID.write().unwrap();
-        *app_owner_id = Some(owner.id);
-        log::debug!("Updated app_owner_id: {:?}", app_owner_id);
-    }
-
-    // テスト用: 環境変数 (IS_SYNC_SLASH) が false なら同期しない
-    let is_sync_slash: bool = match std::env::var("IS_SYNC_SLASH").map(|i| i.parse()) {
-        Ok(Ok(b)) => b,
-        _ => true,
-    };
-
-    if !is_sync_slash {
-        return;
-    }
+    ctx.set_activity(Some(ActivityData::custom(format_t!(
+        "msg.bot_activity",
+        lang,
+        bot_prefix
+    ))));
 
     // スラッシュコマンドの登録
     log::info!("Registering SlashCommands...");
 
-    let commands = slash_commands::registers();
+    let commands = slash_command::registers(lang);
     match Command::set_global_commands(&ctx.http, commands).await {
         Ok(_) => log::info!("Slash command has been registered."),
         Err(_) => log::error!("Failed to register slash command."),
