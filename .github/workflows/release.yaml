@@ -44,7 +44,7 @@ jobs:
 
       - name: Generate License
         run: |
-          echo "accepted = ['Apache-2.0','MIT','BSD-3-Clause','Zlib','MPL-2.0','Unicode-DFS-2016','ISC','OpenSSL','OpenSSL-standalone','SSLeay-standalone','GPL-1.0','LicenseRef-scancode-public-domain','LicenseRef-scancode-unknown-license-reference', 'Unicode-3.0', 'CC0-1.0']" > about.toml
+          echo "accepted = ['Apache-2.0','MIT','BSD-3-Clause','Zlib','MPL-2.0','Unicode-DFS-2016','ISC','OpenSSL','OpenSSL-standalone','SSLeay-standalone','GPL-1.0','LicenseRef-scancode-public-domain','LicenseRef-scancode-unknown-license-reference', 'Unicode-3.0', 'CC0-1.0', 'BSL-1.0']" > about.toml
           cargo about init
           cargo about generate about.hbs -o ThirdPartyLicenses.html
 
