@@ -138,8 +138,6 @@ async fn auto_join(
         None => return Ok(()),
     };
 
-    // 参加
-
     // サーバーIDと読み上げるチャンネルIDのペアを登録
     handler
         .read_channels
@@ -150,9 +148,16 @@ async fn auto_join(
         .channel_queues
         .with_write(|lock| lock.insert(guild_id, VecDeque::new()));
 
-    if let Err(_) = manager.join(guild_id, in_user_channel).await {
-        log::error!(lang_t!("log.fail_join_vc"));
-        return Ok(());
+    // 参加
+    match manager.join(guild_id, in_user_channel).await {
+        Ok(handler) => {
+            let mut lock = handler.lock().await;
+            let _ = lock.deafen(true).await;
+        }
+        Err(_) => {
+            log::error!(lang_t!("log.fail_join_vc"));
+            return Ok(());
+        }
     }
 
     // メッセージ送信や音声再生を同時実行
