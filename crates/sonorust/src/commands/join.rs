@@ -40,17 +40,23 @@ pub async fn join(
     };
 
     // もし VC に参加できなかったら返す
-    if let Err(err) = manager.join(guild_id, connect_ch).await {
-        log::error!("{}: {err}", lang_t!("log.fail_join_vc"));
-        return Err(lang_t!("join.cannot_connect", lang));
-    } else {
-        log::debug!(
-            "Joined voice channel (name: {} id: {})",
-            guild_id
-                .name(&ctx.cache)
-                .unwrap_or_else(|| "Unknown".to_string()),
-            guild_id,
-        );
+    match manager.join(guild_id, connect_ch).await {
+        Ok(handler) => {
+            log::debug!(
+                "Joined voice channel (name: {} id: {})",
+                guild_id
+                    .name(&ctx.cache)
+                    .unwrap_or_else(|| "Unknown".to_string()),
+                guild_id,
+            );
+
+            let mut lock = handler.lock().await;
+            let _ = lock.deafen(true).await;
+        }
+        Err(err) => {
+            log::error!("{}: {err}", lang_t!("log.fail_join_vc"));
+            return Err(lang_t!("join.cannot_connect", lang));
+        }
     }
 
     // サーバーIDと読み上げるチャンネルIDのペアを登録
