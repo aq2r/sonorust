@@ -27,7 +27,7 @@ Download: [Releases](https://github.com/aq2r/sonorust/releases)
 
 ## How to use and feature explanation
 
-TODO...
+[Sonorust Wiki](https://github.com/aq2r/sonorust/wiki) (Japanese Only)
 
 ## Link
 

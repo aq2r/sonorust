@@ -28,7 +28,7 @@ Download: [Releases](https://github.com/aq2r/sonorust/releases)
 
 ## 使用方法と機能解説
 
-TODO...
+[Sonorust Wiki](https://github.com/aq2r/sonorust/wiki)
 
 ## Link
 
