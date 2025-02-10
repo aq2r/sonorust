@@ -19,10 +19,14 @@ pub async fn wav(
     text: &str,
 ) -> Result<Either<CreateAttachment, &'static str>, SonorustError> {
     let lang = handler.setting_json.get_bot_lang();
+    let read_limit = handler.setting_json.with_read(|lock| lock.read_limit);
+
     let userdata = UserData::from(user_id).await?;
     let (default_model, language) = handler
         .setting_json
         .with_read(|lock| (lock.default_model.clone(), lock.infer_lang.to_string()));
+
+    let limited_text: String = text.chars().take(read_limit as usize).collect();
 
     let audio_data: Result<Vec<u8>, SonorustError> = {
         let mut lock = handler.infer_client.write().await;
@@ -37,14 +41,14 @@ pub async fn wav(
                     language: language,
                 };
                 python_client
-                    .infer(text, param, &default_model)
+                    .infer(&limited_text, param, &default_model)
                     .await
                     .map_err(|err| err.into())
             }
 
             Either::Right(rust_client) => rust_client
                 .infer(
-                    text,
+                    &limited_text,
                     &userdata.model_name,
                     userdata.length as f32,
                     &default_model,
