@@ -22,18 +22,53 @@ pub async fn autojoin(
 ) -> Result<(Option<CreateEmbed>, Option<&str>), SonorustError> {
     match (voice_ch_id, text_ch_id) {
         (Some(v), Some(t)) => autojoin_setting(ctx, guild_id, user_id, lang, v, t).await,
-        _ => Ok((autojoin_view(guild_id, lang).await?, None)),
+        _ => Ok((autojoin_embed(ctx, guild_id, lang).await?, None)),
     }
 }
 
 // voice_ch_id と text_ch_id が Noneの場合
-async fn autojoin_view(
+async fn autojoin_embed(
+    ctx: &Context,
     guild_id: Option<GuildId>,
     lang: Lang,
 ) -> Result<Option<CreateEmbed>, SonorustError> {
     let guild_id = guild_id.ok_or_else(|| SonorustError::GuildIdIsNone)?;
-    let guilddata = GuildData::from(guild_id).await?;
 
+    // 存在しないチャンネルがないかチェックして、ないなら消す処理
+    let mut guild_channels = None;
+
+    if let Some(guild) = ctx.cache.guild(guild_id) {
+        let channel_set = guild
+            .channels
+            .iter()
+            .map(|(ch, _)| *ch)
+            .collect::<HashSet<_>>();
+
+        guild_channels = Some(channel_set);
+    }
+
+    if let Some(guild_channels) = guild_channels {
+        let guilddata = GuildData::from(guild_id).await?;
+
+        for (voice_ch, text_chs) in &guilddata.autojoin_channels {
+            for i in text_chs {
+                if guild_channels.get(voice_ch).is_none() || guild_channels.get(i).is_none() {
+                    let mut guilddata_mut = GuildDataMut::from(guild_id).await?;
+
+                    let Some(channel_pair) = guilddata_mut.autojoin_channels.get_mut(voice_ch)
+                    else {
+                        continue;
+                    };
+
+                    channel_pair.remove(i);
+                    guilddata_mut.update().await?;
+                }
+            }
+        }
+    }
+
+    // embed 作成
+    let guilddata = GuildData::from(guild_id).await?;
     let embed = {
         let mut description = String::new();
 
@@ -114,7 +149,7 @@ async fn autojoin_setting(
         text
     };
 
-    let embed = autojoin_view(option_guild_id, lang).await?;
+    let embed = autojoin_embed(ctx, option_guild_id, lang).await?;
 
     Ok((embed, Some(text)))
 }
