@@ -37,6 +37,12 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
         .interact_text()
         .unwrap();
 
+    let wav_read_limit: u32 = Input::new()
+        .with_prompt("Enter the maximum number of characters that the /wav command accepts")
+        .with_initial_text("100")
+        .interact_text()
+        .unwrap();
+
     let default_model: String = Input::new()
         .with_prompt("Enter the model name to be used as the default")
         .with_initial_text("None")
@@ -114,6 +120,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
             SettingJson {
                 bot_token,
                 read_limit,
+                wav_read_limit,
                 default_model,
                 prefix,
                 bot_lang,
@@ -177,6 +184,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
             SettingJson {
                 bot_token,
                 read_limit,
+                wav_read_limit,
                 default_model,
                 prefix,
                 bot_lang,
