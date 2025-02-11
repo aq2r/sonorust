@@ -58,6 +58,7 @@ pub struct SettingJson {
     // all
     pub bot_token: String,
     pub read_limit: u32,
+    pub wav_read_limit: u32,
     pub default_model: String,
     pub prefix: String,
     pub bot_lang: BotLang,
