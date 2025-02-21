@@ -37,6 +37,12 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
         .interact_text()
         .unwrap();
 
+    let fastread_limit: u32 = Input::new()
+        .with_prompt("Enter the maximum number of characters for fast read (only if enabled in the server settings)")
+        .with_initial_text("50")
+        .interact_text()
+        .unwrap();
+
     let wav_read_limit: u32 = Input::new()
         .with_prompt("Enter the maximum number of characters that the /wav command accepts")
         .with_initial_text("100")
@@ -120,6 +126,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
             SettingJson {
                 bot_token,
                 read_limit,
+                fastread_limit,
                 wav_read_limit,
                 default_model,
                 prefix,
@@ -184,6 +191,7 @@ pub fn ask_to_create_setting_json() -> anyhow::Result<SettingJson> {
             SettingJson {
                 bot_token,
                 read_limit,
+                fastread_limit,
                 wav_read_limit,
                 default_model,
                 prefix,
