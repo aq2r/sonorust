@@ -10,7 +10,7 @@ use langrustang::lang_t;
 use serenity::all::{ChannelId, Context, GuildId, UserId};
 use songbird::input::Input;
 use sonorust_db::{GuildData, UserData};
-use sonorust_setting::{InferLang, InferUse, SettingJson};
+use sonorust_setting::{InferUse, SettingJson};
 use tokio::sync::RwLock as TokioRwLock;
 
 use super::rwlock::RwLockExt;
