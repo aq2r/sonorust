@@ -323,23 +323,69 @@ async fn entrance_exit_log_play(
 
     // サーバーデータの取得
     let guild_data = GuildData::from(guild_id).await?;
-    if guild_data.options.is_entrance_exit_log {
-        // メッセージを送信
-        let msg = match user_action {
-            UserAction::Entrance => format!("> **{}** さんが参加しました。", user_name),
-            UserAction::Exit => format!("> **{}** さんが退席しました。", user_name),
+
+    // 入退出ログと入退出音声通知の並列実行
+    {
+        let mut log_future = None;
+        let mut voice_future = None;
+
+        if guild_data.options.is_entrance_exit_log {
+            log_future = Some(async {
+                // メッセージを送信
+                let msg = match user_action {
+                    UserAction::Entrance => format!("> **{}** さんが参加しました。", user_name),
+                    UserAction::Exit => format!("> **{}** さんが退席しました。", user_name),
+                };
+
+                let mut tasks = FuturesUnordered::new();
+
+                for i in log_channels.iter() {
+                    tasks.push(i.say(&ctx.http, &msg));
+                }
+
+                while let Some(item) = tasks.next().await {
+                    item?;
+                }
+
+                Ok::<(), SonorustError>(())
+            });
         };
 
-        let mut tasks = FuturesUnordered::new();
+        if guild_data.options.is_entrance_exit_play {
+            voice_future = Some(async {
+                let msg = match user_action {
+                    UserAction::Entrance => format!("{} さんが参加しました。", user_name),
+                    UserAction::Exit => format!("{} さんが退席しました。", user_name),
+                };
 
-        for i in log_channels.iter() {
-            tasks.push(i.say(&ctx.http, &msg));
+                if let Some(channel) = log_channels.iter().next() {
+                    handler
+                        .infer_client
+                        .play_on_vc(handler, ctx, Some(guild_id), *channel, user_id, &msg)
+                        .await?;
+                }
+
+                Ok::<(), SonorustError>(())
+            })
         }
 
-        while let Some(item) = tasks.next().await {
-            item?;
-        }
-    };
+        let future_1 = async {
+            if let Some(future) = log_future {
+                future.await?;
+            }
+            Ok::<(), SonorustError>(())
+        };
+        let future_2 = async {
+            if let Some(future) = voice_future {
+                future.await?;
+            }
+            Ok::<(), SonorustError>(())
+        };
+
+        let (r1, r2) = tokio::join!(future_1, future_2);
+        r1?;
+        r2?;
+    }
 
     Ok(())
 }

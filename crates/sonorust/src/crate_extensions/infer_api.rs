@@ -10,7 +10,7 @@ use langrustang::lang_t;
 use serenity::all::{ChannelId, Context, GuildId, UserId};
 use songbird::input::Input;
 use sonorust_db::{GuildData, UserData};
-use sonorust_setting::{InferLang, InferUse, SettingJson};
+use sonorust_setting::{InferUse, SettingJson};
 use tokio::sync::RwLock as TokioRwLock;
 
 use super::rwlock::RwLockExt;
@@ -125,18 +125,10 @@ impl InferApiExt for TokioRwLock<Either<Sbv2PythonClient, Sbv2RustClient>> {
         let guilddata = GuildData::from(guild_id).await?;
 
         // オプションがオンになっていて一定の文字数より多い場合、素早く読む
-        // todo: ユーザーで文字数を指定できるようにする？
-        let fastread_border = {
-            let infer_lang = handler.setting_json.with_read(|lock| lock.infer_lang);
+        let fastread_border = handler.setting_json.with_read(|lock| lock.fastread_limit);
 
-            match infer_lang {
-                InferLang::Ja => 30,
-                InferLang::En => 60,
-                InferLang::Zh => 30,
-            }
-        };
-
-        if guilddata.options.is_if_long_fastread && play_content.chars().count() >= fastread_border
+        if guilddata.options.is_if_long_fastread
+            && play_content.chars().count() >= fastread_border as usize
         {
             userdata.length = 0.5;
         }
