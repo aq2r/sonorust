@@ -220,7 +220,7 @@ async fn auto_leave(ctx: &Context, guild_id: Option<GuildId>) {
         return;
     }
 
-    let in_vc_users = {
+    let is_in_notbot_user: bool = {
         let guild = match guild_id.to_guild_cached(&ctx.cache) {
             Some(guild) => guild,
             None => return,
@@ -234,16 +234,18 @@ async fn auto_leave(ctx: &Context, guild_id: Option<GuildId>) {
             None => return,
         };
 
-        // そのチャンネル id にいるユーザーリストを取得
-        voice_states
+        // そのチャンネル id にいるユーザーを取得してbotかどうか確認
+        let users_isbot = voice_states
             .iter()
             .filter(|(_, v)| v.channel_id == self_in_vc) // 同じVCにいるユーザーだけ取得
-            .map(|(k, _)| *k) // UserId だけ取得
-            .collect::<Vec<_>>()
+            .map(|(_, i)| i.member.as_ref().map(|m| m.user.bot).unwrap_or(false)) // UserId だけ取得
+            .collect::<Vec<_>>();
+
+        users_isbot.iter().any(|i| !i)
     };
 
-    // 自分だけではないなら何もしない
-    if in_vc_users.len() != 1 {
+    // メンバーがすべてBOTではないなら return
+    if is_in_notbot_user {
         return;
     }
 
