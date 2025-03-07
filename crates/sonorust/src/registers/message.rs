@@ -480,12 +480,14 @@ impl TextReplace {
         self.text = EngToKana::convert_all(&self.text);
     }
 
-    // ~ から始まるとなぜかエラーをはいたりするため、 ~ などは - ー に変換
+    // ~ から始まるとなぜかエラーをはいたりするため、 ~ などは - ー に変換、修正
     pub fn remove_err(&mut self) {
         self.text = self.text.replace("~", "-").replace("～", "ー");
 
-        if self.text == "ー" {
-            self.text.clear();
+        if self.text.starts_with("ー") {
+            if let Some(s) = self.text.strip_prefix("ー") {
+                self.text = s.to_string();
+            };
         }
     }
 }
