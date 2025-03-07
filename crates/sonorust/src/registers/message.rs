@@ -482,7 +482,11 @@ impl TextReplace {
 
     // ~ から始まるとなぜかエラーをはいたりするため、 ~ などは - ー に変換、修正
     pub fn remove_err(&mut self) {
-        self.text = self.text.replace("~", "-").replace("～", "ー");
+        self.text = self
+            .text
+            .replace("~", "-")
+            .replace("～", "ー")
+            .replace("っー", "っ");
 
         if self.text.starts_with("ー") {
             if let Some(s) = self.text.strip_prefix("ー") {

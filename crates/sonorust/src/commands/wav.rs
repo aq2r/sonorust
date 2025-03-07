@@ -11,6 +11,7 @@ use crate::{
     errors::SonorustError,
     Handler,
     _langrustang_autogen::Lang,
+    registers::TextReplace,
 };
 
 pub async fn wav(
@@ -28,6 +29,12 @@ pub async fn wav(
 
     let limited_text: String = text.chars().take(wav_read_limit as usize).collect();
 
+    // 読み上げ用に文字を置換する
+    let mut text_replace = TextReplace::new(limited_text);
+    text_replace.remove_err();
+
+    let replaced_text = text_replace.as_string();
+
     let audio_data: Result<Vec<u8>, SonorustError> = {
         let mut lock = handler.infer_client.write().await;
 
@@ -41,14 +48,14 @@ pub async fn wav(
                     language: language,
                 };
                 python_client
-                    .infer(&limited_text, param, &default_model)
+                    .infer(&replaced_text, param, &default_model)
                     .await
                     .map_err(|err| err.into())
             }
 
             Either::Right(rust_client) => rust_client
                 .infer(
-                    &limited_text,
+                    &replaced_text,
                     &userdata.model_name,
                     userdata.length as f32,
                     &default_model,
