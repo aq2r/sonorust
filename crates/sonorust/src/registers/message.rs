@@ -350,6 +350,7 @@ async fn other_processing(
     // 読み上げ用に文字を置換する
     let mut text_replace = TextReplace::new(&msg.content);
 
+    text_replace.remove_err();
     text_replace.remove_codeblock();
     text_replace.remove_url();
     text_replace.remove_discord_obj();
@@ -477,5 +478,14 @@ impl TextReplace {
     /// 英語をカタカナ読みに変換する
     pub fn eng_to_kana(&mut self) {
         self.text = EngToKana::convert_all(&self.text);
+    }
+
+    // ~ から始まるとなぜかエラーをはいたりするため、 ~ などは - ー に変換
+    pub fn remove_err(&mut self) {
+        self.text = self.text.replace("~", "-").replace("～", "ー");
+
+        if self.text == "ー" {
+            self.text.clear();
+        }
     }
 }
