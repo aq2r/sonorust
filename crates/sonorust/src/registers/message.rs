@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::OnceLock, time::Instant};
+use std::{
+    collections::HashMap,
+    sync::{LazyLock, OnceLock},
+    time::Instant,
+};
 
 use either::Either;
 use engtokana::EngToKana;
@@ -480,18 +484,23 @@ impl TextReplace {
         self.text = EngToKana::convert_all(&self.text);
     }
 
-    // ~ から始まるとなぜかエラーをはいたりするため、 ~ などは - ー に変換、修正
+    // ~ から始まるとなぜかエラーをはいたりするため修正
+    // っーーー や ッーーー を っ に修正
     pub fn remove_err(&mut self) {
-        self.text = self
-            .text
-            .replace("~", "-")
-            .replace("～", "ー")
-            .replace("っー", "っ");
+        self.text = self.text.replace("~", "-").replace("～", "ー");
+
+        static RE: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"(ッ|ｯ|っ)ー+").expect("Regex Failed"));
+        self.text = RE.replace_all(&self.text, "$1").to_string();
 
         if self.text.starts_with("ー") {
             if let Some(s) = self.text.strip_prefix("ー") {
                 self.text = s.to_string();
             };
+        }
+
+        if self.text.is_empty() {
+            self.text = String::from("-");
         }
     }
 }
