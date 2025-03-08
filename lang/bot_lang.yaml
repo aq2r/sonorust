@@ -510,8 +510,8 @@ msg.failed.infer:
     Left the voice channel.
 
 msg.bot_activity:
-  ja: "{}join | Sonorust v2.3.4"
-  en: "{}join | Sonorust v2.3.4"
+  ja: "{}join | Sonorust v2.3.5"
+  en: "{}join | Sonorust v2.3.5"
 
 #____ Guild Settings value ____#
 
